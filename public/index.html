@@ -87,9 +87,9 @@ input[type=color]{width:40px;height:32px;border:none;background:none;cursor:poin
     <h2>🤖 Singleplayer</h2>
     <p style="color:#556644;font-size:12px;margin-bottom:8px">Play against bots — pick a map below or random</p>
     <div class="row" id="botMapRow"></div>
-    <button class="bot-btn" onclick="startBotGame()" style="background:linear-gradient(135deg,#1a3a1a,#0f250f)">⚔ Play vs Bots (random map)</button>
-    <button class="bot-btn" onclick="startBotGame(null,'gungame')" style="background:linear-gradient(135deg,#3a2a1a,#251a0f);margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
-    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:linear-gradient(135deg,#2a1a3a,#1a0f25);margin-top:4px">💀 Chaos Mode vs Bots (random map)</button>
+    <button class="bot-btn mode-btn" onclick="startBotGame()" style="background:linear-gradient(135deg,#1a3a1a,#0f250f)">⚔ Play vs Bots (random map)</button>
+    <button class="bot-btn mode-btn" onclick="startBotGame(null,'gungame')" style="background:linear-gradient(135deg,#3a2a1a,#251a0f);margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
+    <button class="bot-btn mode-btn" onclick="startBotGame(null,'draft')" style="background:linear-gradient(135deg,#2a1a3a,#1a0f25);margin-top:4px">💀 Chaos Mode vs Bots (random map)</button>
   </div>
 
   <div class="controls-hint">
@@ -194,7 +194,7 @@ function applyLang(){
   if(h2s[5])h2s[5].textContent=t('voteMap');
   if(h2s[6])h2s[6].textContent=t('singleplayer');
   document.querySelector('#lobby .section:nth-child(5) p').textContent=t('spDesc');
-  const btns=document.querySelectorAll('.bot-btn');
+  const btns=document.querySelectorAll('.mode-btn');
   if(btns[0])btns[0].textContent=t('botRandom');
   if(btns[1])btns[1].textContent=t('gunGame');
   if(btns[2])btns[2].textContent=t('armsRace');
