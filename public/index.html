@@ -641,7 +641,7 @@ function draw(){
       ctx.fillStyle='#fff';ctx.font='22px sans-serif';
       ctx.fillText(t('pickPerk'),W/2,165);
       const offered=draftOverlay.offered||[];
-      const bw=220,bh=130,gap=30,totalW=offered.length*bw+(offered.length-1)*gap;
+      const bw=220,bh=150,gap=30,totalW=offered.length*bw+(offered.length-1)*gap;
       const startX=(W-totalW)/2,by=H/2-bh/2;
       draftOverlay._buttons=[];
       for(let i=0;i<offered.length;i++){
@@ -655,7 +655,10 @@ function draw(){
         ctx.font='bold 16px sans-serif';
         ctx.fillText(pk.label,bx+bw/2,by+70);
         ctx.font='12px sans-serif';ctx.fillStyle='#ccc';
-        ctx.fillText(pk.desc,bx+bw/2,by+100);
+        const words=pk.desc.split(' '),maxW=bw-16;let lines=[],cur='';
+        for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxW){lines.push(cur);cur=w;}else cur=test;}
+        if(cur)lines.push(cur);
+        for(let li=0;li<lines.length;li++)ctx.fillText(lines[li],bx+bw/2,by+92+li*14);
       }
     }
 
