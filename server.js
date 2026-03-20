@@ -303,14 +303,11 @@ function tickBotInRoom(room,bot){
     const obs=MAPS[room.mapKey].obstacles;
     for(const o of obs){if(rectCircle(o.x,o.y,o.w,o.h,bot.x,bot.y,PLAYER_R)){pushOut(bot,o);}}
   }
-  // hard clamp bots to inner zone (prevents corner camping)
-  const bm=PLAYER_R+50;
-  bot.x=Math.max(bm,Math.min(W-bm,bot.x));
-  bot.y=Math.max(bm,Math.min(H-bm,bot.y));
-  // if stuck (oscillating or no movement), teleport immediately
-  if(Math.abs(bot.x-prevX)<0.5&&Math.abs(bot.y-prevY)<0.5){
-    const sp=MAPS[room.mapKey].spawns[Math.floor(Math.random()*MAPS[room.mapKey].spawns.length)];
-    bot.x=sp.x;bot.y=sp.y;
+  // if bot is near any edge, steer toward center
+  const edgeZone=80;
+  if(bot.x<edgeZone||bot.x>W-edgeZone||bot.y<edgeZone||bot.y>H-edgeZone){
+    const cx=W/2,cy=H/2,dx=cx-bot.x,dy=cy-bot.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d>0){bot.x+=dx/d*spd;bot.y+=dy/d*spd;}
   }
 }
 
