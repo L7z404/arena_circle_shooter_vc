@@ -6,7 +6,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static('public'));
 
-const W=1200,H=800,SPEED=5,PLAYER_R=18;
+const W=1600,H=1000,SPEED=5,PLAYER_R=18;
 const SKINS=['solid','ring','cross','star','skull'];
 const WEAPONS={
   pistol:{cd:300,speed:10,dmg:20,spread:0,count:1,size:4,label:'Pistol 🔫'},
@@ -41,20 +41,26 @@ const DRAFT_PERKS=[
 ];
 const MAPS={
   arena:{label:'Arena',desc:'Classic arena with cover walls',
-    obstacles:[{x:W/2-40,y:H/2-80,w:80,h:160},{x:300,y:150,w:100,h:40},{x:300,y:H-190,w:100,h:40},{x:W-400,y:150,w:100,h:40},{x:W-400,y:H-190,w:100,h:40},{x:W/2-150,y:50,w:40,h:120},{x:W/2+110,y:50,w:40,h:120},{x:W/2-150,y:H-170,w:40,h:120},{x:W/2+110,y:H-170,w:40,h:120}],
+    obstacles:[{x:W/2-40,y:H/2-100,w:80,h:200},{x:350,y:180,w:120,h:50},{x:350,y:H-230,w:120,h:50},{x:W-470,y:180,w:120,h:50},{x:W-470,y:H-230,w:120,h:50},{x:W/2-180,y:60,w:40,h:140},{x:W/2+140,y:60,w:40,h:140},{x:W/2-180,y:H-200,w:40,h:140},{x:W/2+140,y:H-200,w:40,h:140}],
     spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#1a1a2e'},
   maze:{label:'Maze',desc:'Tight corridors and dead ends',
-    obstacles:[{x:200,y:0,w:30,h:300},{x:200,y:400,w:30,h:400},{x:400,y:100,w:30,h:400},{x:400,y:600,w:30,h:200},{x:600,y:0,w:30,h:250},{x:600,y:350,w:30,h:200},{x:600,y:650,w:30,h:150},{x:800,y:200,w:30,h:400},{x:800,y:700,w:30,h:100},{x:1000,y:0,w:30,h:350},{x:1000,y:450,w:30,h:350},{x:300,y:300,w:100,h:30},{x:500,y:550,w:100,h:30},{x:700,y:150,w:100,h:30},{x:900,y:650,w:100,h:30}],
-    spawns:[{x:200,y:200},{x:200,y:H-200},{x:W-200,y:200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:300,y:H/2},{x:900,y:H/2},{x:W/2,y:200}],color:'#1a2a1a'},
+    obstacles:[{x:250,y:0,w:30,h:350},{x:250,y:500,w:30,h:500},{x:500,y:100,w:30,h:450},{x:500,y:700,w:30,h:300},{x:750,y:0,w:30,h:300},{x:750,y:400,w:30,h:250},{x:750,y:750,w:30,h:250},{x:1000,y:200,w:30,h:500},{x:1000,y:800,w:30,h:200},{x:1250,y:0,w:30,h:400},{x:1250,y:550,w:30,h:450},{x:375,y:350,w:120,h:30},{x:625,y:650,w:120,h:30},{x:875,y:180,w:120,h:30},{x:1125,y:750,w:120,h:30}],
+    spawns:[{x:200,y:200},{x:200,y:H-200},{x:W-200,y:200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:400,y:H/2},{x:W-400,y:H/2},{x:W/2,y:200}],color:'#1a2a1a'},
   open:{label:'Wasteland',desc:'Wide open with minimal cover',
-    obstacles:[{x:W/2-20,y:H/2-20,w:40,h:40},{x:200,y:200,w:50,h:50},{x:W-250,y:200,w:50,h:50},{x:200,y:H-250,w:50,h:50},{x:W-250,y:H-250,w:50,h:50}],
+    obstacles:[{x:W/2-25,y:H/2-25,w:50,h:50},{x:250,y:250,w:60,h:60},{x:W-310,y:250,w:60,h:60},{x:250,y:H-310,w:60,h:60},{x:W-310,y:H-310,w:60,h:60},{x:W/2,y:250,w:40,h:40},{x:W/2,y:H-290,w:40,h:40}],
     spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#2a1a1a'},
   fortress:{label:'Fortress',desc:'Four rooms connected by corridors',
-    obstacles:[{x:0,y:H/2-15,w:W/2-100,h:30},{x:W/2+100,y:H/2-15,w:W/2-100,h:30},{x:W/2-15,y:0,w:30,h:H/2-100},{x:W/2-15,y:H/2+100,w:30,h:H/2-100},{x:200,y:200,w:40,h:40},{x:W-240,y:200,w:40,h:40},{x:200,y:H-240,w:40,h:40},{x:W-240,y:H-240,w:40,h:40},{x:W/2-50,y:H/2-50,w:25,h:25},{x:W/2+25,y:H/2+25,w:25,h:25}],
-    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:300,y:H/2},{x:W-300,y:H/2},{x:W/2,y:300}],color:'#1a1a28'},
+    obstacles:[{x:0,y:H/2-15,w:W/2-120,h:30},{x:W/2+120,y:H/2-15,w:W/2-120,h:30},{x:W/2-15,y:0,w:30,h:H/2-120},{x:W/2-15,y:H/2+120,w:30,h:H/2-120},{x:250,y:250,w:50,h:50},{x:W-300,y:250,w:50,h:50},{x:250,y:H-300,w:50,h:50},{x:W-300,y:H-300,w:50,h:50},{x:W/2-60,y:H/2-60,w:30,h:30},{x:W/2+30,y:H/2+30,w:30,h:30}],
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:350,y:H/2},{x:W-350,y:H/2},{x:W/2,y:350}],color:'#1a1a28'},
   pillars:{label:'Pillars',desc:'Scattered pillars for quick cover',
-    obstacles:(()=>{const o=[];for(let r=0;r<4;r++)for(let c=0;c<6;c++){if((r+c)%2===0)o.push({x:130+c*170,y:120+r*170,w:35,h:35});}return o;})(),
-    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#1e1a2e'}
+    obstacles:(()=>{const o=[];for(let r=0;r<5;r++)for(let c=0;c<7;c++){if((r+c)%2===0)o.push({x:150+c*190,y:120+r*180,w:40,h:40});}return o;})(),
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#1e1a2e'},
+  crossfire:{label:'Crossfire',desc:'X-shaped walls force close combat',
+    obstacles:[{x:200,y:200,w:400,h:30},{x:200,y:200,w:30,h:250},{x:W-600,y:H-230,w:400,h:30},{x:W-230,y:H-450,w:30,h:250},{x:W/2-15,y:H/2-80,w:30,h:160},{x:W/2-80,y:H/2-15,w:160,h:30}],
+    spawns:[{x:200,y:H/2},{x:W-200,y:H/2},{x:W/2,y:200},{x:W/2,y:H-200},{x:300,y:300},{x:W-300,y:H-300},{x:300,y:H-300},{x:W-300,y:300}],color:'#2a1a28'},
+  ruins:{label:'Ruins',desc:'Crumbling walls and scattered debris',
+    obstacles:[{x:300,y:150,w:80,h:80},{x:600,y:300,w:60,h:120},{x:900,y:100,w:100,h:60},{x:1200,y:250,w:70,h:70},{x:200,y:500,w:120,h:40},{x:500,y:600,w:40,h:120},{x:800,y:500,w:80,h:80},{x:1100,y:650,w:60,h:100},{x:400,y:800,w:100,h:50},{x:1000,y:800,w:80,h:60},{x:W/2-40,y:H/2-40,w:80,h:80}],
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#2a2218'}
 };
 const MAP_KEYS=Object.keys(MAPS);
 const POWERUP_TYPES=[
@@ -84,7 +90,7 @@ function createRoom(mapKey,creatorIds,mode){
   const map=MAPS[mapKey];
   const room={id,mapKey,mode:mode||'ffa',players:{},scores:{},bullets:[],powerups:[],bots:{},gameOver:false};
   if(mode==='gungame')room.gunProgress={};
-  if(mode==='draft'){room.round=1;room.maxRounds=10;room.draftPhase=false;room.playerPerks={};room.draftChoices={};room.roundScores={};room.roundTimer=null;}
+  if(mode==='draft'){room.round=1;room.maxRounds=20;room.draftPhase=false;room.playerPerks={};room.draftChoices={};room.roundScores={};room.roundTimer=null;}
   rooms[id]=room;
   let idx=0;
   for(const sid of creatorIds){
@@ -151,8 +157,6 @@ function killPlayerInRoom(room,p,killerId){
   // draft mode: first kill ends the round
   if(room.mode==='draft'&&killerId&&!room.draftPhase&&!room.gameOver){
     room.roundWinner=killerId;
-    if(room.roundTimer){clearTimeout(room.roundTimer);room.roundTimer=null;}
-    setTimeout(()=>endDraftRound(room),500);
   }
 }
 
@@ -445,15 +449,17 @@ function tickRoom(room){
     return;
   }
 
-  // respawn dead players
-  for(const p of Object.values(room.players)){
-    if(p.dead&&now>=p.respawnAt){
-      p.dead=false;p.hp=100+hasPerk(room,p.id,'extralife')*50;p.maxHp=p.hp;
-      const dashN=hasPerk(room,p.id,'dash');
-      p.spawnShield=Date.now()+3000+(dashN*2000);
-      const sp=randomSpawnInMap(room.mapKey,p.x,p.y);p.x=sp.x;p.y=sp.y;
-      if(p.isBot){p.botDir=Math.random()*Math.PI*2;p.botDirTimer=0;p.botStrafe=1;}
-      else io.to(p.id).emit('respawn');
+  // respawn dead players (not in draft mode — dead stay dead until next round)
+  if(room.mode!=='draft'){
+    for(const p of Object.values(room.players)){
+      if(p.dead&&now>=p.respawnAt){
+        p.dead=false;p.hp=100+hasPerk(room,p.id,'extralife')*50;p.maxHp=p.hp;
+        const dashN=hasPerk(room,p.id,'dash');
+        p.spawnShield=Date.now()+3000+(dashN*2000);
+        const sp=randomSpawnInMap(room.mapKey,p.x,p.y);p.x=sp.x;p.y=sp.y;
+        if(p.isBot){p.botDir=Math.random()*Math.PI*2;p.botDirTimer=0;p.botStrafe=1;}
+        else io.to(p.id).emit('respawn');
+      }
     }
   }
 
@@ -593,6 +599,16 @@ function tickRoom(room){
   });
 
   for(const p of Object.values(room.players)){if(p.hp<=0&&!p.dead)killPlayerInRoom(room,p,null);}
+
+  // draft mode: end round when 1 or fewer alive
+  if(room.mode==='draft'&&!room.draftPhase&&!room.gameOver&&!room._draftEnding){
+    const alive=Object.values(room.players).filter(p=>!p.dead);
+    if(alive.length<=1){
+      if(alive.length===1)room.roundWinner=alive[0].id;
+      room._draftEnding=true;
+      setTimeout(()=>{room._draftEnding=false;endDraftRound(room);},800);
+    }
+  }
 
   // despawn old powerups
   room.powerups=room.powerups.filter(p=>Date.now()-p.spawnedAt<7000);

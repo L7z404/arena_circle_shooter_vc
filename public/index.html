@@ -93,6 +93,8 @@ let myId=null,W=1200,H=800,state=null,phase='connecting';
 let keys={},mouse={x:0,y:0};
 let allWeapons={},allWeaponKeys=[],skins=[];
 let myName='Player',myColor='#ff4444',mySkin='solid',myLoadout=['pistol','shotgun','rifle'];
+// load saved profile
+try{const s=JSON.parse(localStorage.getItem('arenaProfile'));if(s){myName=s.name||myName;myColor=s.color||myColor;mySkin=s.skin||mySkin;myLoadout=s.loadout||myLoadout;}}catch(e){}
 let myVote=null,currentWeapon=0;
 let explosions=[],deathParticles=[],PLAYER_R=18;
 let respawnTimer=0;
@@ -164,13 +166,19 @@ window.toggleWeapon=function(wk){
 document.getElementById('nameInput').addEventListener('input',e=>{myName=e.target.value||'Player';sendCustomize();});
 document.getElementById('colorInput').addEventListener('input',e=>{myColor=e.target.value;drawPreview();sendCustomize();});
 
-function sendCustomize(){socket.emit('customize',{name:myName,color:myColor,skin:mySkin,loadout:myLoadout.length===3?myLoadout:undefined});}
+function sendCustomize(){
+  socket.emit('customize',{name:myName,color:myColor,skin:mySkin,loadout:myLoadout.length===3?myLoadout:undefined});
+  try{localStorage.setItem('arenaProfile',JSON.stringify({name:myName,color:myColor,skin:mySkin,loadout:myLoadout}));}catch(e){}
+}
 
 // === NETWORK ===
 socket.on('init',d=>{
   myId=d.id;W=d.w;H=d.h;allWeapons=d.weapons;allWeaponKeys=d.weaponKeys;skins=d.skins;perkIcons=d.perkIcons||{};
-  myLoadout=[...d.defaultLoadout];
+  // only use defaults if no saved profile
+  try{const s=JSON.parse(localStorage.getItem('arenaProfile'));if(s&&s.loadout)myLoadout=s.loadout;else myLoadout=[...d.defaultLoadout];}catch(e){myLoadout=[...d.defaultLoadout];}
   canvas.width=W;canvas.height=H;overlay.classList.add('hidden');
+  document.getElementById('nameInput').value=myName;
+  document.getElementById('colorInput').value=myColor;
   buildSkinRow();buildLoadoutRow();drawPreview();
   sendCustomize();
 });
