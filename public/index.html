@@ -211,7 +211,7 @@ socket.on('deathFx',d=>{
 });
 socket.on('killFeed',d=>{killFeed.push({...d,t:Date.now()});if(killFeed.length>5)killFeed.shift();});
 socket.on('gameOver',d=>{gameOverMsg=d.winner+' WINS!';draftOverlay=null;});
-socket.on('draftRound',d=>{draftOverlay=null;draftRoundEnd=Date.now()+45000;});
+socket.on('draftRound',d=>{draftOverlay=null;});
 socket.on('draftPick',d=>{
   draftOverlay=d;draftOverlay.pickedPerks=[];
   draftOverlay.skipped=(d.roundWinner===myId);
@@ -332,6 +332,24 @@ function draw(){
 
     // vampire dark aura
     if(perks.includes('vampire')){ctx.beginPath();ctx.arc(p.x,p.y,pr+4,0,Math.PI*2);ctx.strokeStyle='#cc000066';ctx.lineWidth=2;ctx.stroke();}
+
+    // thorns spikes
+    if(perks.includes('thorns')){for(let i=0;i<8;i++){const a=i*Math.PI/4;const ox=Math.cos(a)*(pr+3),oy=Math.sin(a)*(pr+3);ctx.beginPath();ctx.moveTo(p.x+ox,p.y+oy);ctx.lineTo(p.x+Math.cos(a)*(pr+9),p.y+Math.sin(a)*(pr+9));ctx.strokeStyle='#44cc44';ctx.lineWidth=2;ctx.stroke();}}
+
+    // homing magnet indicator
+    if(perks.includes('homing')){ctx.beginPath();ctx.arc(p.x,p.y,pr+7,p.angle-0.4,p.angle+0.4);ctx.strokeStyle='#ff44ff88';ctx.lineWidth=3;ctx.stroke();}
+
+    // regen green pulse
+    if(perks.includes('regen2')){const pulse=1+Math.sin(tick*.1)*.15;ctx.beginPath();ctx.arc(p.x,p.y,pr*pulse,0,Math.PI*2);ctx.strokeStyle='#00ff4433';ctx.lineWidth=3;ctx.stroke();}
+
+    // gravity well
+    if(perks.includes('gravity2')){ctx.beginPath();ctx.arc(p.x,p.y,150,0,Math.PI*2);ctx.strokeStyle='#8844ff22';ctx.lineWidth=1;ctx.stroke();for(let i=0;i<4;i++){const a=tick*0.06+i*Math.PI/2,r=50+Math.sin(tick*0.12+i)*40;ctx.beginPath();ctx.arc(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,2,0,Math.PI*2);ctx.fillStyle='#8844ff';ctx.fill();}}
+
+    // splitshot indicator
+    if(perks.includes('splitshot')){ctx.beginPath();ctx.arc(p.x,p.y,pr+5,0,Math.PI*2);ctx.strokeStyle='#44aaff44';ctx.lineWidth=1;ctx.setLineDash([2,4]);ctx.stroke();ctx.setLineDash([]);}
+
+    // dash afterimage ring
+    if(perks.includes('dash')){ctx.beginPath();ctx.arc(p.x,p.y,pr+8,0,Math.PI*2);ctx.strokeStyle='#ffffff22';ctx.lineWidth=1;ctx.stroke();}
 
     // speedster trail
     if(perks.includes('speedster')){ctx.globalAlpha*=0.3;drawSkin(ctx,p.x-Math.cos(p.angle)*8,p.y-Math.sin(p.angle)*8,pr,p.color,p.skin||'solid',p.angle);ctx.globalAlpha=isGhost?(p.id===myId?0.4:0.15):1;}
@@ -470,8 +488,7 @@ function draw(){
   // draft round HUD
   if(state.mode==='draft'&&state.round){
     ctx.textAlign='left';ctx.font='bold 16px sans-serif';ctx.fillStyle='#ffcc00';
-    const rl=Math.max(0,(draftRoundEnd-Date.now())/1000);
-    ctx.fillText(`Round ${state.round}/${state.maxRounds}  ⏱${rl.toFixed(0)}s`,16,H-16);
+    ctx.fillText(`Round ${state.round}/${state.maxRounds}`,16,H-16);
     // show my perks as emojis at bottom center
     const myPerks=state.playerPerks?.[myId]||[];
     if(myPerks.length){

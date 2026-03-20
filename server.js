@@ -32,6 +32,12 @@ const DRAFT_PERKS=[
   {id:'tinyterror',label:'Tiny Terror',icon:'🐜',desc:'Smaller hitbox (60% radius)'},
   {id:'shrapnel',label:'Shrapnel',icon:'💥',desc:'+2 extra bullets per shot'},
   {id:'sniperbuff',label:'Longshot',icon:'🎯',desc:'Bullets travel 50% faster'},
+  {id:'homing',label:'Homing',icon:'🧲',desc:'Bullets curve toward nearest enemy'},
+  {id:'thorns',label:'Thorns',icon:'🌵',desc:'Deal 15 dmg back when hit'},
+  {id:'regen2',label:'Regen',icon:'💚',desc:'Regenerate 2 HP/sec'},
+  {id:'splitshot',label:'Split Shot',icon:'🔱',desc:'Bullets split into 3 on wall hit'},
+  {id:'gravity2',label:'Gravity Well',icon:'🕳',desc:'Pull nearby enemies toward you'},
+  {id:'dash',label:'Dash',icon:'🏃',desc:'Move 25% faster + phase through bullets briefly after respawn'},
 ];
 const MAPS={
   arena:{label:'Arena',desc:'Classic arena with cover walls',
@@ -159,7 +165,7 @@ function spawnPowerupInRoom(room){
   if(v)room.powerups.push({...t,x,y,id:Date.now()+Math.random(),spawnedAt:Date.now()});
 }
 
-function hasPerk(room,pid,perkId){return room.playerPerks&&room.playerPerks[pid]&&room.playerPerks[pid].includes(perkId);}
+function hasPerk(room,pid,perkId){return room.playerPerks&&room.playerPerks[pid]?room.playerPerks[pid].filter(p=>p===perkId).length:0;}
 
 function startDraftRound(room){
   room.draftPhase=false;room.draftChoices={};room.bullets=[];room.powerups=[];
@@ -167,17 +173,14 @@ function startDraftRound(room){
   const map=MAPS[room.mapKey];let idx=0;
   for(const p of Object.values(room.players)){
     const sp=map.spawns[idx%map.spawns.length];
-    p.x=sp.x;p.y=sp.y;p.hp=hasPerk(room,p.id,'extralife')?150:100;
+    p.x=sp.x;p.y=sp.y;p.hp=100+hasPerk(room,p.id,'extralife')*50;
     p.maxHp=p.hp;p.dead=false;p.effects={};p.spawnShield=Date.now()+3000;
     idx++;
   }
   // track kills this round
   for(const pid of Object.keys(room.players))room.roundScores[pid]=room.scores[pid];
   io.to(room.id).emit('draftRound',{round:room.round,maxRounds:room.maxRounds});
-  // fallback: if no kill in 45s, end round with no winner
-  if(room.roundTimer)clearTimeout(room.roundTimer);
   room.roundWinner=null;
-  room.roundTimer=setTimeout(()=>endDraftRound(room),45000);
 }
 
 function endDraftRound(room){
@@ -330,23 +333,28 @@ io.on('connection',socket=>{
     if(p.spawnShield&&Date.now()<p.spawnShield)return;
     if(room.draftPhase)return;
     const now=Date.now(),w=WEAPONS[p.weapon];
-    let cd=w.cd;if(hasPerk(room,socket.id,'nocd'))cd=Math.floor(cd*0.5);
+    let cd=w.cd;const ncd=hasPerk(room,socket.id,'nocd');if(ncd)cd=Math.floor(cd*Math.pow(0.6,ncd));
     if(now-p.lastShot<cd)return;
     p.lastShot=now;
     socket.emit('shot');
     const isPierce=hasEffect(p,'pierce'),isRico=hasEffect(p,'ricochet')||hasPerk(room,socket.id,'ricochet');
     let dmg=w.dmg,spd=w.speed,sz=w.size,cnt=w.count,expl=!!w.explosive;
-    if(hasPerk(room,socket.id,'bigbullets'))sz=Math.round(sz*2);
+    const bb=hasPerk(room,socket.id,'bigbullets');if(bb)sz=Math.round(sz*(1+bb*0.8));
     if(hasPerk(room,socket.id,'explosive'))expl=true;
-    if(hasPerk(room,socket.id,'heavyhitter')){dmg*=2;spd*=0.6;}
-    if(hasPerk(room,socket.id,'shrapnel'))cnt+=2;
-    if(hasPerk(room,socket.id,'sniperbuff'))spd*=1.5;
+    const hh=hasPerk(room,socket.id,'heavyhitter');if(hh){dmg*=1+hh;spd*=Math.pow(0.7,hh);}
+    const sh=hasPerk(room,socket.id,'shrapnel');if(sh)cnt+=sh*2;
+    const sb=hasPerk(room,socket.id,'sniperbuff');if(sb)spd*=1+sb*0.4;
+    const ricoN=hasPerk(room,socket.id,'ricochet');
+    const homN=hasPerk(room,socket.id,'homing');
+    const splN=hasPerk(room,socket.id,'splitshot');
     for(let i=0;i<cnt;i++){
-      const a=p.angle+(cnt>1?(i-(cnt-1)/2)*w.spread:(Math.random()-0.5)*w.spread);
+      const spread=cnt>1?w.spread||(sh?0.15:0):0;
+      const a=p.angle+(cnt>1?(i-(cnt-1)/2)*spread:(Math.random()-0.5)*w.spread);
       room.bullets.push({x:p.x+Math.cos(a)*(PLAYER_R+8),y:p.y+Math.sin(a)*(PLAYER_R+8),
         vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
         owner:socket.id,color:p.color,dmg:dmg,size:sz,
-        fire:false,electric:false,explosive:expl,pierce:isPierce,ricochet:isRico,bounces:isRico?3:0});
+        fire:false,electric:false,explosive:expl,pierce:isPierce,ricochet:isRico,bounces:isRico?(2+ricoN*2):0,
+        homing:homN,origSpd:spd,splitN:splN,isSplit:false});
     }
   });
 
@@ -440,7 +448,9 @@ function tickRoom(room){
   // respawn dead players
   for(const p of Object.values(room.players)){
     if(p.dead&&now>=p.respawnAt){
-      p.dead=false;p.hp=hasPerk(room,p.id,'extralife')?150:100;p.maxHp=p.hp;p.spawnShield=Date.now()+3000;
+      p.dead=false;p.hp=100+hasPerk(room,p.id,'extralife')*50;p.maxHp=p.hp;
+      const dashN=hasPerk(room,p.id,'dash');
+      p.spawnShield=Date.now()+3000+(dashN*2000);
       const sp=randomSpawnInMap(room.mapKey,p.x,p.y);p.x=sp.x;p.y=sp.y;
       if(p.isBot){p.botDir=Math.random()*Math.PI*2;p.botDirTimer=0;p.botStrafe=1;}
       else io.to(p.id).emit('respawn');
@@ -454,7 +464,8 @@ function tickRoom(room){
     if(hasEffect(p,'frozen')){clamp(p);continue;}
     if(p.isBot)continue; // bots handled above
     let spd=hasEffect(p,'x2speed')?SPEED*2:SPEED;
-    if(hasPerk(room,p.id,'speedster'))spd*=1.4;
+    const sn=hasPerk(room,p.id,'speedster');if(sn)spd*=1+sn*0.35;
+    const dn=hasPerk(room,p.id,'dash');if(dn)spd*=1+dn*0.2;
     const k=p.keys;
     if(k.w||k.arrowup)p.y-=spd;if(k.s||k.arrowdown)p.y+=spd;
     if(k.a||k.arrowleft)p.x-=spd;if(k.d||k.arrowright)p.x+=spd;
@@ -488,20 +499,54 @@ function tickRoom(room){
       if(d<120&&d>5){o.x+=dx/d*1.5;o.y+=dy/d*1.5;}
     }
   }
-  // regen
-  for(const p of Object.values(room.players)){if(hasEffect(p,'regen')&&p.hp<p.maxHp)p.hp=Math.min(p.maxHp,p.hp+0.15);}
-
-  // tesla field (draft perk)
+  // regen (pickup + draft perk)
   for(const p of Object.values(room.players)){
-    if(p.dead||!hasPerk(room,p.id,'tesla'))continue;
+    if(p.dead)continue;
+    if(hasEffect(p,'regen')&&p.hp<p.maxHp)p.hp=Math.min(p.maxHp,p.hp+0.15);
+    const rn=hasPerk(room,p.id,'regen2');if(rn&&p.hp<p.maxHp)p.hp=Math.min(p.maxHp,p.hp+rn*2/60);
+  }
+
+  // gravity well (draft perk) — pull enemies
+  for(const p of Object.values(room.players)){
+    const gn=hasPerk(room,p.id,'gravity2');if(!gn||p.dead)continue;
+    const pull=0.3*gn;
+    for(const o of Object.values(room.players)){
+      if(o.id===p.id||o.dead)continue;
+      const dx=p.x-o.x,dy=p.y-o.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<150&&d>5){o.x+=dx/d*pull;o.y+=dy/d*pull;}
+    }
+  }
+
+  // tesla field (draft perk, stacks)
+  for(const p of Object.values(room.players)){
+    const tn=hasPerk(room,p.id,'tesla');if(!tn||p.dead)continue;
+    const tDmg=3*tn;
     for(const o of Object.values(room.players)){
       if(o.id===p.id||o.dead||(o.spawnShield&&now<o.spawnShield))continue;
-      if((p.x-o.x)**2+(p.y-o.y)**2<120*120){o.hp-=3;if(o.hp<=0)killPlayerInRoom(room,o,p.id);}
+      if((p.x-o.x)**2+(p.y-o.y)**2<120*120){
+        if(hasEffect(o,'mirror')){p.hp-=tDmg;if(p.hp<=0)killPlayerInRoom(room,p,o.id);}
+        else{o.hp-=tDmg;if(o.hp<=0)killPlayerInRoom(room,o,p.id);}
+      }
     }
   }
 
   // bullets
   room.bullets=room.bullets.filter(b=>{
+    // homing: curve toward nearest enemy
+    if(b.homing){
+      let closest=null,cd2=250*250;
+      for(const p of Object.values(room.players)){
+        if(p.id===b.owner||p.dead)continue;
+        const d2=(p.x-b.x)**2+(p.y-b.y)**2;if(d2<cd2){cd2=d2;closest=p;}
+      }
+      if(closest){
+        const dx=closest.x-b.x,dy=closest.y-b.y,d=Math.sqrt(dx*dx+dy*dy);
+        const str=0.15*b.homing;
+        b.vx+=dx/d*str;b.vy+=dy/d*str;
+        const spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy),maxSpd=b.origSpd||10;
+        if(spd>maxSpd){b.vx=b.vx/spd*maxSpd;b.vy=b.vy/spd*maxSpd;}
+      }
+    }
     b.x+=b.vx;b.y+=b.vy;
     // arena edge: bounce or destroy
     if(b.x<0||b.x>W||b.y<0||b.y>H){
@@ -518,18 +563,28 @@ function tickRoom(room){
         const m=Math.min(oL,oR,oT,oB);
         if(m===oL||m===oR)b.vx*=-1; else b.vy*=-1;
         b.x+=b.vx*2;b.y+=b.vy*2;b.bounces--;
-      } else {if(b.explosive)io.to(room.id).emit('explosion',{x:b.x,y:b.y});return false;}
+      } else {
+        if(b.explosive)io.to(room.id).emit('explosion',{x:b.x,y:b.y});
+        // splitshot: spawn child bullets on wall hit
+        if(b.splitN&&!b.isSplit){for(let s=0;s<3;s++){const sa=Math.random()*Math.PI*2;
+          room.bullets.push({x:b.x+Math.cos(sa)*5,y:b.y+Math.sin(sa)*5,vx:Math.cos(sa)*8,vy:Math.sin(sa)*8,
+            owner:b.owner,color:b.color,dmg:b.dmg*0.5,size:Math.max(2,b.size-1),
+            fire:false,electric:false,explosive:false,pierce:false,ricochet:false,bounces:0,homing:b.homing,origSpd:8,isSplit:true,splitN:0});}}
+        return false;
+      }
     }}}
     for(const p of Object.values(room.players)){
       if(p.id===b.owner||p.dead||hasEffect(p,'ghost')||(p.spawnShield&&Date.now()<p.spawnShield))continue;
-      const hr=hasPerk(room,p.id,'tinyterror')?PLAYER_R*0.6:PLAYER_R;
+      const hr=PLAYER_R*Math.pow(0.7,hasPerk(room,p.id,'tinyterror'));
       if((p.x-b.x)**2+(p.y-b.y)**2<(hr+b.size)**2){
         let dmg=b.dmg;if(b.fire)dmg*=1.3;
         if(hasEffect(p,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=dmg;if(sh.hp<=0)killPlayerInRoom(room,sh,p.id);else if(!sh.isBot)io.to(sh.id).emit('hit');}return false;}
         if(b.explosive){io.to(room.id).emit('explosion',{x:b.x,y:b.y});for(const op of Object.values(room.players)){if(op.id===b.owner||hasEffect(op,'ghost')||(op.spawnShield&&Date.now()<op.spawnShield))continue;const d=Math.sqrt((op.x-b.x)**2+(op.y-b.y)**2);if(d<80){let sp=dmg*(1-d/80);if(hasEffect(op,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=sp;if(sh.hp<=0)killPlayerInRoom(room,sh,op.id);}}else op.hp-=sp;}}}
         else p.hp-=dmg;
         // vampire heal
-        if(hasPerk(room,b.owner,'vampire')){const sh=room.players[b.owner];if(sh&&!sh.dead)sh.hp=Math.min(sh.maxHp,sh.hp+dmg*0.2);}
+        const vn=hasPerk(room,b.owner,'vampire');if(vn){const sh=room.players[b.owner];if(sh&&!sh.dead)sh.hp=Math.min(sh.maxHp,sh.hp+dmg*0.2*vn);}
+        // thorns
+        const tn2=hasPerk(room,p.id,'thorns');if(tn2){const sh=room.players[b.owner];if(sh&&!sh.dead){sh.hp-=15*tn2;if(sh.hp<=0)killPlayerInRoom(room,sh,p.id);}}
         if(p.hp<=0)killPlayerInRoom(room,p,b.owner);else if(!p.isBot)io.to(p.id).emit('hit');
         return false;
       }
