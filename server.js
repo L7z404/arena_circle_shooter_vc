@@ -22,19 +22,19 @@ const DEFAULT_LOADOUT=['pistol','shotgun','rifle'];
 const MAPS={
   arena:{label:'Arena',desc:'Classic arena with cover walls',
     obstacles:[{x:W/2-40,y:H/2-80,w:80,h:160},{x:300,y:150,w:100,h:40},{x:300,y:H-190,w:100,h:40},{x:W-400,y:150,w:100,h:40},{x:W-400,y:H-190,w:100,h:40},{x:W/2-150,y:50,w:40,h:120},{x:W/2+110,y:50,w:40,h:120},{x:W/2-150,y:H-170,w:40,h:120},{x:W/2+110,y:H-170,w:40,h:120}],
-    spawns:[{x:150,y:150},{x:W-150,y:150},{x:150,y:H-150},{x:W-150,y:H-150},{x:W/2,y:150},{x:W/2,y:H-150},{x:150,y:H/2},{x:W-150,y:H/2}],color:'#1a1a2e'},
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#1a1a2e'},
   maze:{label:'Maze',desc:'Tight corridors and dead ends',
     obstacles:[{x:200,y:0,w:30,h:300},{x:200,y:400,w:30,h:400},{x:400,y:100,w:30,h:400},{x:400,y:600,w:30,h:200},{x:600,y:0,w:30,h:250},{x:600,y:350,w:30,h:200},{x:600,y:650,w:30,h:150},{x:800,y:200,w:30,h:400},{x:800,y:700,w:30,h:100},{x:1000,y:0,w:30,h:350},{x:1000,y:450,w:30,h:350},{x:300,y:300,w:100,h:30},{x:500,y:550,w:100,h:30},{x:700,y:150,w:100,h:30},{x:900,y:650,w:100,h:30}],
-    spawns:[{x:100,y:100},{x:100,y:H-100},{x:W-100,y:100},{x:W-100,y:H-100},{x:W/2,y:H/2},{x:300,y:H/2},{x:900,y:H/2},{x:W/2,y:100}],color:'#1a2a1a'},
+    spawns:[{x:200,y:200},{x:200,y:H-200},{x:W-200,y:200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:300,y:H/2},{x:900,y:H/2},{x:W/2,y:200}],color:'#1a2a1a'},
   open:{label:'Wasteland',desc:'Wide open with minimal cover',
     obstacles:[{x:W/2-20,y:H/2-20,w:40,h:40},{x:200,y:200,w:50,h:50},{x:W-250,y:200,w:50,h:50},{x:200,y:H-250,w:50,h:50},{x:W-250,y:H-250,w:50,h:50}],
-    spawns:[{x:80,y:80},{x:W-80,y:80},{x:80,y:H-80},{x:W-80,y:H-80},{x:W/2,y:80},{x:W/2,y:H-80},{x:80,y:H/2},{x:W-80,y:H/2}],color:'#2a1a1a'},
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#2a1a1a'},
   fortress:{label:'Fortress',desc:'Four rooms connected by corridors',
     obstacles:[{x:0,y:H/2-15,w:W/2-100,h:30},{x:W/2+100,y:H/2-15,w:W/2-100,h:30},{x:W/2-15,y:0,w:30,h:H/2-100},{x:W/2-15,y:H/2+100,w:30,h:H/2-100},{x:200,y:200,w:40,h:40},{x:W-240,y:200,w:40,h:40},{x:200,y:H-240,w:40,h:40},{x:W-240,y:H-240,w:40,h:40},{x:W/2-50,y:H/2-50,w:25,h:25},{x:W/2+25,y:H/2+25,w:25,h:25}],
-    spawns:[{x:100,y:100},{x:W-100,y:100},{x:100,y:H-100},{x:W-100,y:H-100},{x:W/2,y:H/2},{x:300,y:H/2},{x:W-300,y:H/2},{x:W/2,y:300}],color:'#1a1a28'},
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:H/2},{x:300,y:H/2},{x:W-300,y:H/2},{x:W/2,y:300}],color:'#1a1a28'},
   pillars:{label:'Pillars',desc:'Scattered pillars for quick cover',
     obstacles:(()=>{const o=[];for(let r=0;r<4;r++)for(let c=0;c<6;c++){if((r+c)%2===0)o.push({x:130+c*170,y:120+r*170,w:35,h:35});}return o;})(),
-    spawns:[{x:60,y:60},{x:W-60,y:60},{x:60,y:H-60},{x:W-60,y:H-60},{x:W/2,y:60},{x:W/2,y:H-60},{x:60,y:H/2},{x:W-60,y:H/2}],color:'#1e1a2e'}
+    spawns:[{x:200,y:200},{x:W-200,y:200},{x:200,y:H-200},{x:W-200,y:H-200},{x:W/2,y:200},{x:W/2,y:H-200},{x:200,y:H/2},{x:W-200,y:H/2}],color:'#1e1a2e'}
 };
 const MAP_KEYS=Object.keys(MAPS);
 const POWERUP_TYPES=[
@@ -301,24 +301,17 @@ function tickBotInRoom(room,bot){
   clamp(bot);
   if(!hasEffect(bot,'ghost')){
     const obs=MAPS[room.mapKey].obstacles;
-    for(const o of obs){if(rectCircle(o.x,o.y,o.w,o.h,bot.x,bot.y,PLAYER_R)){pushOut(bot,o);bot.botDir=Math.random()*Math.PI*2;bot.botDirTimer=0;}}
+    for(const o of obs){if(rectCircle(o.x,o.y,o.w,o.h,bot.x,bot.y,PLAYER_R)){pushOut(bot,o);}}
   }
-  // bounce off arena edges
-  const margin=PLAYER_R+5;
-  if(bot.x<=margin){bot.botDir=Math.random()*Math.PI*0.5-Math.PI*0.25;bot.botDirTimer=0;bot.x=margin;}
-  if(bot.x>=W-margin){bot.botDir=Math.PI+Math.random()*Math.PI*0.5-Math.PI*0.25;bot.botDirTimer=0;bot.x=W-margin;}
-  if(bot.y<=margin){bot.botDir=Math.PI*0.5+Math.random()*Math.PI*0.5-Math.PI*0.25;bot.botDirTimer=0;bot.y=margin;}
-  if(bot.y>=H-margin){bot.botDir=-Math.PI*0.5+Math.random()*Math.PI*0.5-Math.PI*0.25;bot.botDirTimer=0;bot.y=H-margin;}
-  // if still stuck (no movement), teleport to random spawn
-  if(Math.abs(bot.x-prevX)<0.1&&Math.abs(bot.y-prevY)<0.1){
-    bot.botDir=Math.random()*Math.PI*2;bot.botDirTimer=0;
-    if(bot.botStrafe)bot.botStrafe*=-1;
-    bot.stuckCount=(bot.stuckCount||0)+1;
-    if(bot.stuckCount>60){
-      const sp=MAPS[room.mapKey].spawns[Math.floor(Math.random()*MAPS[room.mapKey].spawns.length)];
-      bot.x=sp.x;bot.y=sp.y;bot.stuckCount=0;
-    }
-  } else bot.stuckCount=0;
+  // hard clamp bots to inner zone (prevents corner camping)
+  const bm=PLAYER_R+50;
+  bot.x=Math.max(bm,Math.min(W-bm,bot.x));
+  bot.y=Math.max(bm,Math.min(H-bm,bot.y));
+  // if stuck (oscillating or no movement), teleport immediately
+  if(Math.abs(bot.x-prevX)<0.5&&Math.abs(bot.y-prevY)<0.5){
+    const sp=MAPS[room.mapKey].spawns[Math.floor(Math.random()*MAPS[room.mapKey].spawns.length)];
+    bot.x=sp.x;bot.y=sp.y;
+  }
 }
 
 function tickRoom(room){
