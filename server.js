@@ -8,6 +8,8 @@ app.use(express.static('public'));
 
 const W=1600,H=1000,SPEED=5,PLAYER_R=18;
 const SKINS=['solid','ring','cross','star','skull'];
+const HATS=['none','crown','horns','halo','antenna','tophat','bandana','mohawk'];
+const CAPES=['none','short','long','tattered','flame'];
 const WEAPONS={
   pistol:{cd:300,speed:10,dmg:20,spread:0,count:1,size:4,label:'Pistol 🔫'},
   shotgun:{cd:700,speed:8,dmg:12,spread:0.25,count:5,size:3,label:'Shotgun 💥'},
@@ -123,7 +125,7 @@ function addBotToRoom(room,idx){
   const loadout=[...WEAPON_KEYS].sort(()=>Math.random()-0.5).slice(0,3);
   const wep=room.mode==='gungame'?WEAPON_KEYS[0]:loadout[0];
   room.players[bid]={id:bid,idx,x:sp.x,y:sp.y,angle:0,hp:100,maxHp:100,
-    color:BOT_COLORS[idx%3],name:BOT_NAMES[idx%3],skin:BOT_SKINS[idx%3],
+    color:BOT_COLORS[idx%3],name:BOT_NAMES[idx%3],skin:BOT_SKINS[idx%3],hat:HATS[1+idx%3],cape:CAPES[1+idx%3],
     loadout,lastShot:0,keys:{},weapon:wep,effects:{},isBot:true,
     botDir:Math.random()*Math.PI*2,botDirTimer:0,botStrafe:1,spawnShield:Date.now()+3000};
   room.scores[bid]=0;room.bots[bid]=room.players[bid];
@@ -263,22 +265,23 @@ function checkAllVoted(){
 }
 // === CONNECTION ===
 io.on('connection',socket=>{
-  lobbyPlayers[socket.id]={name:'Player',color:'#ff4444',skin:'solid',loadout:[...DEFAULT_LOADOUT]};
+  lobbyPlayers[socket.id]={name:'Player',color:'#ff4444',skin:'solid',hat:'none',cape:'none',loadout:[...DEFAULT_LOADOUT]};
   const perkIcons={};for(const p of DRAFT_PERKS)perkIcons[p.id]=p.icon;
-  socket.emit('init',{id:socket.id,w:W,h:H,weapons:WEAPONS,weaponKeys:WEAPON_KEYS,skins:SKINS,defaultLoadout:DEFAULT_LOADOUT,perkIcons});
+  socket.emit('init',{id:socket.id,w:W,h:H,weapons:WEAPONS,weaponKeys:WEAPON_KEYS,skins:SKINS,hats:HATS,capes:CAPES,defaultLoadout:DEFAULT_LOADOUT,perkIcons});
   sendLobby();
 
   socket.on('customize',d=>{
     const p=lobbyPlayers[socket.id];if(!p)return;
     if(d.name&&typeof d.name==='string')p.name=d.name.slice(0,12);
-    if(d.color&&/^#[0-9a-f]{6}$/i.test(d.color))p.color=d.color;
+    if(d.color&&/^#[0-9a-f]{6}$/i.test(d.color)&&d.color.toLowerCase()!=='#000000')p.color=d.color;
     if(d.skin&&SKINS.includes(d.skin))p.skin=d.skin;
+    if(d.hat&&HATS.includes(d.hat))p.hat=d.hat;
+    if(d.cape&&CAPES.includes(d.cape))p.cape=d.cape;
     if(Array.isArray(d.loadout)&&d.loadout.length===3&&d.loadout.every(w=>WEAPONS[w]))p.loadout=[...d.loadout];
-    // also update in-room player if in a room
     const rid=playerRoom[socket.id];
     if(rid&&rooms[rid]&&rooms[rid].players[socket.id]){
       const rp=rooms[rid].players[socket.id];
-      rp.name=p.name;rp.color=p.color;rp.skin=p.skin;
+      rp.name=p.name;rp.color=p.color;rp.skin=p.skin;rp.hat=p.hat;rp.cape=p.cape;
     }
     if(!playerRoom[socket.id])sendLobby();
   });
@@ -486,7 +489,7 @@ function tickRoom(room){
     const state={
       players:Object.values(room.players).map(p=>({
         id:p.id,x:p.x,y:p.y,angle:p.angle,hp:p.hp,maxHp:p.maxHp,
-        color:p.color,name:p.name,skin:p.skin,dead:!!p.dead,
+        color:p.color,name:p.name,skin:p.skin,hat:p.hat||'none',cape:p.cape||'none',dead:!!p.dead,
         score:room.scores[p.id]||0,weapon:p.weapon,loadout:p.loadout,
         lastShot:p.lastShot,effects:[],shielded:false
       })),
@@ -703,7 +706,7 @@ function tickRoom(room){
   const state={
     players:Object.values(room.players).map(p=>({
       id:p.id,x:p.x,y:p.y,angle:p.angle,hp:p.hp,maxHp:p.maxHp,
-      color:p.color,name:p.name,skin:p.skin,dead:!!p.dead,
+      color:p.color,name:p.name,skin:p.skin,hat:p.hat||'none',cape:p.cape||'none',dead:!!p.dead,
       score:room.scores[p.id]||0,weapon:p.weapon,loadout:p.loadout,
       lastShot:p.lastShot,
       effects:Object.keys(p.effects).filter(t=>now<p.effects[t]),

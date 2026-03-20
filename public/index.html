@@ -4,82 +4,100 @@
 <meta charset="UTF-8"><title>Arena Shooter</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#111;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:'Segoe UI',sans-serif;color:#fff}
+body{background:#0a0a12;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;overflow-y:auto;font-family:'Segoe UI',sans-serif;color:#fff}
 canvas{border:2px solid #333;border-radius:8px;cursor:crosshair}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);display:flex;justify-content:center;align-items:center;z-index:10;flex-direction:column;gap:16px}
 #overlay.hidden{display:none}
-#lobby{display:none;text-align:center;max-height:100vh;overflow-y:auto;padding:20px}
-#lobby.active{display:flex;flex-direction:column;align-items:center;gap:16px}
-#lobby h1{font-size:32px;color:#ff4444;text-shadow:0 0 20px #ff444466}
-h2{font-size:18px;color:#aaa}
-.section{background:#1a1a2a;border:1px solid #333;border-radius:12px;padding:16px;width:100%;max-width:700px}
-.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;margin:8px 0}
-.map-grid{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-.map-card{background:#222;border:2px solid #444;border-radius:10px;padding:12px 18px;cursor:pointer;transition:all .2s;min-width:140px}
-.map-card:hover{border-color:#888;transform:scale(1.05)}
-.map-card.voted{border-color:#ff4444;background:#331111}
-.map-card h3{margin:0 0 4px;font-size:16px}.map-card p{margin:0;font-size:12px;color:#888}
-.map-card .votes{font-size:13px;color:#ff8888;margin-top:6px}
-.player-dot{width:20px;height:20px;border-radius:50%;border:2px solid #fff}
-input[type=text]{background:#222;border:1px solid #555;color:#fff;padding:6px 12px;border-radius:6px;font-size:14px;width:140px;text-align:center}
+#lobby{display:none;text-align:center;width:100%;max-width:760px;overflow-y:auto;padding:20px 16px}
+#lobby.active{display:flex;flex-direction:column;align-items:center;gap:14px}
+#lobby h1{font-size:42px;color:#ff2244;text-shadow:0 0 30px #ff224488,0 0 60px #ff224444,2px 2px 0 #000;letter-spacing:4px;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{text-shadow:0 0 30px #ff224488,0 0 60px #ff224444,2px 2px 0 #000}50%{text-shadow:0 0 40px #ff4466aa,0 0 80px #ff446666,2px 2px 0 #000}}
+#lobby h1 .sub{display:block;font-size:13px;color:#ff6644;letter-spacing:8px;margin-top:4px;text-transform:uppercase}
+h2{font-size:16px;color:#ff8866;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.section{background:linear-gradient(135deg,#1a1020,#151525);border:1px solid #332244;border-radius:14px;padding:16px;width:100%;position:relative;overflow:hidden}
+.section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ff4466,#ff8844,transparent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;margin:6px 0}
+.map-grid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.map-card{background:linear-gradient(135deg,#1a1a2a,#222233);border:2px solid #443355;border-radius:10px;padding:10px 16px;cursor:pointer;transition:all .2s;min-width:130px}
+.map-card:hover{border-color:#ff6644;transform:scale(1.05);box-shadow:0 0 15px #ff664433}
+.map-card.voted{border-color:#ff2244;background:linear-gradient(135deg,#331122,#221133);box-shadow:0 0 20px #ff224444}
+.map-card h3{margin:0 0 4px;font-size:15px;color:#ffaa66}.map-card p{margin:0;font-size:11px;color:#776688}
+.map-card .votes{font-size:12px;color:#ff6688;margin-top:4px}
+.player-dot{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px currentColor}
+input[type=text]{background:#1a1a2a;border:1px solid #443355;color:#fff;padding:6px 12px;border-radius:6px;font-size:14px;width:140px;text-align:center;transition:border-color .2s}
+input[type=text]:focus{border-color:#ff6644;outline:none;box-shadow:0 0 10px #ff664433}
 input[type=color]{width:40px;height:32px;border:none;background:none;cursor:pointer;border-radius:4px}
-.skin-btn{padding:6px 14px;border-radius:6px;border:2px solid #444;background:#222;color:#ccc;cursor:pointer;font-size:13px;transition:all .15s}
-.skin-btn:hover{border-color:#888}.skin-btn.active{border-color:#ff4444;background:#331111;color:#fff}
-.wep-btn{padding:6px 10px;border-radius:6px;border:2px solid #444;background:#222;color:#ccc;cursor:pointer;font-size:12px;transition:all .15s}
-.wep-btn:hover{border-color:#888}.wep-btn.active{border-color:#44ff44;background:#113311;color:#fff}
+.skin-btn,.hat-btn,.cape-btn{padding:5px 12px;border-radius:6px;border:2px solid #332244;background:#1a1020;color:#998;cursor:pointer;font-size:12px;transition:all .15s}
+.skin-btn:hover,.hat-btn:hover,.cape-btn:hover{border-color:#ff6644;color:#fff;box-shadow:0 0 8px #ff664433}
+.skin-btn.active,.hat-btn.active,.cape-btn.active{border-color:#ff2244;background:#331122;color:#fff;box-shadow:0 0 12px #ff224444}
+.wep-btn{padding:5px 10px;border-radius:6px;border:2px solid #223322;background:#1a201a;color:#998;cursor:pointer;font-size:12px;transition:all .15s}
+.wep-btn:hover{border-color:#44ff44;box-shadow:0 0 8px #44ff4433}.wep-btn.active{border-color:#44ff44;background:#113311;color:#fff;box-shadow:0 0 12px #44ff4444}
 .wep-btn.disabled{opacity:.3;cursor:not-allowed}
-.bot-btn{padding:6px 14px;border-radius:6px;border:none;color:#fff;cursor:pointer;font-size:13px;background:#336633}
-.preview-canvas{border-radius:50%;border:2px solid #444}
-.controls-hint{font-size:13px;color:#555;max-width:600px;line-height:1.5}
-#backBtn{position:fixed;top:16px;left:16px;z-index:20;background:#333;padding:8px 16px;font-size:14px;border-radius:6px;display:none;color:#fff;border:1px solid #555;cursor:pointer}
+.bot-btn{padding:8px 16px;border-radius:8px;border:1px solid #332244;color:#aa8899;cursor:pointer;font-size:13px;transition:all .2s;font-weight:bold;background:#12101a}
+.bot-btn:hover{transform:scale(1.05);box-shadow:0 0 15px rgba(255,100,50,0.3)}
+.preview-canvas{border-radius:50%;border:2px solid #443355;box-shadow:0 0 15px #ff224433}
+.controls-hint{font-size:12px;color:#554466;max-width:600px;line-height:1.6}
+#backBtn{position:fixed;top:16px;left:16px;z-index:20;background:#1a1020;padding:8px 16px;font-size:14px;border-radius:6px;display:none;color:#ff8866;border:1px solid #443355;cursor:pointer}
+#backBtn:hover{border-color:#ff6644}
 #backBtn.show{display:block}
-#voteStatus{font-size:18px;color:#ffaa44}
+#voteStatus{font-size:16px;color:#ffaa44;text-shadow:0 0 10px #ffaa4444}
+.color-grid{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.color-swatch{width:32px;height:32px;border-radius:6px;border:2px solid #333;cursor:pointer;transition:all .15s}
+.color-swatch:hover{transform:scale(1.15);border-color:#fff}
+.color-swatch.active{border-color:#ff2244;box-shadow:0 0 10px #ff224466}
 </style>
 </head>
 <body>
 <div id="overlay"><div id="msg">Connecting...</div></div>
 <div id="lobby">
-  <h1>⚔ ARENA SHOOTER ⚔</h1>
+  <h1>💀 ARENA SHOOTER 💀<span class="sub">Chaos Awaits</span></h1>
 
   <div class="section">
     <h2>👤 Customize</h2>
     <div class="row">
-      <canvas id="preview" class="preview-canvas" width="60" height="60"></canvas>
+      <canvas id="preview" class="preview-canvas" width="80" height="80"></canvas>
       <div>
         <div class="row"><label>Name</label><input type="text" id="nameInput" maxlength="12" value="Player"></div>
-        <div class="row"><label>Color</label><input type="color" id="colorInput" value="#ff4444"></div>
+        <div class="row"><label>Color</label></div>
+        <div class="color-grid" id="colorGrid"></div>
       </div>
     </div>
+    <h2 style="margin-top:8px">🎨 Skin</h2>
     <div class="row" id="skinRow"></div>
+    <h2 style="margin-top:8px">🎩 Hat</h2>
+    <div class="row" id="hatRow"></div>
+    <h2 style="margin-top:8px">🦸 Cape</h2>
+    <div class="row" id="capeRow"></div>
   </div>
 
   <div class="section">
-    <h2>🔫 Loadout <span style="color:#666;font-size:13px">(pick 3)</span></h2>
+    <h2>🔫 Loadout <span style="color:#554466;font-size:12px">(pick 3)</span></h2>
     <div class="row" id="loadoutRow"></div>
   </div>
 
   <div class="section">
     <h2>🗺 Vote for Map</h2>
     <div class="row" id="playerDots"></div>
-    <p style="color:#666;font-size:13px" id="playerCount"></p>
+    <p style="color:#554466;font-size:12px" id="playerCount"></p>
     <div class="map-grid" id="mapGrid"></div>
     <p id="voteStatus"></p>
   </div>
 
-  <div class="section" style="background:#1a2a1a;border-color:#2a4a2a">
+  <div class="section" style="background:linear-gradient(135deg,#1a2018,#152015);border-color:#2a4a2a">
     <h2>🤖 Singleplayer</h2>
-    <p style="color:#888;font-size:13px;margin-bottom:8px">Play against bots — pick a map below or random</p>
+    <p style="color:#556644;font-size:12px;margin-bottom:8px">Play against bots — pick a map below or random</p>
     <div class="row" id="botMapRow"></div>
-    <button class="bot-btn" onclick="startBotGame()" style="background:#44aa44;margin-top:4px">⚔ Play vs Bots (random map)</button>
-    <button class="bot-btn" onclick="startBotGame(null,'gungame')" style="background:#aa8844;margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
-    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:#8844aa;margin-top:4px">💀 Chaos Mode vs Bots (random map)</button>
+    <button class="bot-btn" onclick="startBotGame()" style="background:linear-gradient(135deg,#1a3a1a,#0f250f)">⚔ Play vs Bots (random map)</button>
+    <button class="bot-btn" onclick="startBotGame(null,'gungame')" style="background:linear-gradient(135deg,#3a2a1a,#251a0f);margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
+    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:linear-gradient(135deg,#2a1a3a,#1a0f25);margin-top:4px">💀 Chaos Mode vs Bots (random map)</button>
   </div>
 
   <div class="controls-hint">
     WASD move · Mouse aim · Click shoot · 1/2/3 switch loadout weapon · Scroll to cycle<br>
     Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce 🔄Ricochet
   </div>
-  <button id="langBtn" onclick="window.setLang(document.getElementById('langBtn').textContent.includes('Español')?'es':'en')" style="margin-top:8px;padding:8px 16px;border-radius:6px;border:1px solid #555;background:#222;color:#fff;cursor:pointer;font-size:14px">🇪🇸 Español</button>
+  <button id="langBtn" onclick="window.setLang(document.getElementById('langBtn').textContent.includes('Español')?'es':'en')" style="margin-top:8px;padding:8px 16px;border-radius:6px;border:1px solid #443355;background:#1a1020;color:#ff8866;cursor:pointer;font-size:14px">🇪🇸 Español</button>
+  <button id="musicBtn" onclick="window.toggleMusic()" style="margin-top:4px;padding:8px 16px;border-radius:6px;border:1px solid #443355;background:#1a1020;color:#ff8866;cursor:pointer;font-size:14px">🔇 Music Off</button>
 </div>
 <button id="backBtn" onclick="socket.emit('backToLobby')">← Lobby</button>
 <canvas id="c"></canvas>
@@ -95,7 +113,8 @@ const socket=io();
 const LANG={
 en:{
   connecting:'Connecting...',gameFull:'Game full (4/4).',
-  title:'⚔ ARENA SHOOTER ⚔',customize:'👤 Customize',name:'Name',color:'Color',
+  title:'💀 ARENA SHOOTER 💀',subtitle:'Chaos Awaits',customize:'👤 Customize',name:'Name',color:'Color',
+  skinLabel:'🎨 Skin',hatLabel:'🎩 Hat',capeLabel:'🦸 Cape',
   loadout:'🔫 Loadout',pick3:'(pick 3)',voteMap:'🗺 Vote for Map',
   singleplayer:'🤖 Singleplayer',spDesc:'Play against bots — pick a map below or random',
   botRandom:'⚔ Play vs Bots (random map)',gunGame:'🔫 Gun Game vs Bots (random map)',
@@ -112,7 +131,8 @@ en:{
 },
 es:{
   connecting:'Conectando...',gameFull:'Juego lleno (4/4).',
-  title:'⚔ ARENA SHOOTER ⚔',customize:'👤 Personalizar',name:'Nombre',color:'Color',
+  title:'💀 ARENA SHOOTER 💀',subtitle:'El Caos Te Espera',customize:'👤 Personalizar',name:'Nombre',color:'Color',
+  skinLabel:'🎨 Aspecto',hatLabel:'🎩 Sombrero',capeLabel:'🦸 Capa',
   loadout:'🔫 Equipamiento',pick3:'(elige 3)',voteMap:'🗺 Votar Mapa',
   singleplayer:'🤖 Un Jugador',spDesc:'Juega contra bots — elige un mapa o aleatorio',
   botRandom:'⚔ Jugar vs Bots (mapa aleatorio)',gunGame:'🔫 Gun Game vs Bots (mapa aleatorio)',
@@ -162,12 +182,17 @@ function tPerk(pk){
 function t(k){return LANG[lang][k]||LANG.en[k]||k;}
 function setLang(l){lang=l;localStorage.setItem('arenaLang',l);applyLang();playSound('click');}
 window.setLang=setLang;
+window.toggleMusic=function(){musicEnabled=!musicEnabled;localStorage.setItem('arenaMusic',musicEnabled?'on':'off');if(!musicEnabled)stopMusic();else{const tr=phase==='lobby'?'lobby':gameMode==='gungame'?'gungame':gameMode==='draft'?'draft':'ffa';startMusic(tr);}document.getElementById('musicBtn').textContent=musicEnabled?'🔊 Music On':'🔇 Music Off';};
 function applyLang(){
-  document.querySelector('#lobby h1').textContent=t('title');
-  document.querySelectorAll('#lobby .section h2')[0].textContent=t('customize');
-  document.querySelectorAll('#lobby .section h2')[1].innerHTML=t('loadout')+' <span style="color:#666;font-size:13px">'+t('pick3')+'</span>';
-  document.querySelectorAll('#lobby .section h2')[2].textContent=t('voteMap');
-  document.querySelectorAll('#lobby .section h2')[3].textContent=t('singleplayer');
+  document.querySelector('#lobby h1').innerHTML=t('title')+'<span class="sub">'+t('subtitle')+'</span>';
+  const h2s=document.querySelectorAll('#lobby .section h2');
+  if(h2s[0])h2s[0].textContent=t('customize');
+  if(h2s[1])h2s[1].textContent=t('skinLabel');
+  if(h2s[2])h2s[2].textContent=t('hatLabel');
+  if(h2s[3])h2s[3].textContent=t('capeLabel');
+  if(h2s[4])h2s[4].innerHTML=t('loadout')+' <span style="color:#554466;font-size:12px">'+t('pick3')+'</span>';
+  if(h2s[5])h2s[5].textContent=t('voteMap');
+  if(h2s[6])h2s[6].textContent=t('singleplayer');
   document.querySelector('#lobby .section:nth-child(5) p').textContent=t('spDesc');
   const btns=document.querySelectorAll('.bot-btn');
   if(btns[0])btns[0].textContent=t('botRandom');
@@ -175,7 +200,6 @@ function applyLang(){
   if(btns[2])btns[2].textContent=t('armsRace');
   document.querySelector('.controls-hint').innerHTML=t('controls')+'<br>'+t('powerups');
   document.getElementById('backBtn').textContent=t('backLobby');
-  document.querySelector('label[for="nameInput"],#lobby label:first-of-type')||0;
   const labels=document.querySelectorAll('#lobby .row label');
   if(labels[0])labels[0].textContent=t('name');
   if(labels[1])labels[1].textContent=t('color');
@@ -184,10 +208,10 @@ function applyLang(){
 
 let myId=null,W=1200,H=800,state=null,phase='connecting';
 let keys={},mouse={x:0,y:0};
-let allWeapons={},allWeaponKeys=[],skins=[];
-let myName='Player',myColor='#ff4444',mySkin='solid',myLoadout=['pistol','shotgun','rifle'];
+let allWeapons={},allWeaponKeys=[],skins=[],hats=[],capes=[];
+let myName='Player',myColor='#ff4444',mySkin='solid',myHat='none',myCape='none',myLoadout=['pistol','shotgun','rifle'];
 // load saved profile
-try{const s=JSON.parse(localStorage.getItem('arenaProfile'));if(s){myName=s.name||myName;myColor=s.color||myColor;mySkin=s.skin||mySkin;myLoadout=s.loadout||myLoadout;}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('arenaProfile'));if(s){myName=s.name||myName;myColor=s.color||myColor;mySkin=s.skin||mySkin;myHat=s.hat||myHat;myCape=s.cape||myCape;myLoadout=s.loadout||myLoadout;}}catch(e){}
 let myVote=null,currentWeapon=0;
 let explosions=[],deathParticles=[],PLAYER_R=18;
 let respawnTimer=0;
@@ -202,7 +226,7 @@ canvas.width=W;canvas.height=H;canvas.style.display='none';
 const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
 
 // === MUSIC ENGINE ===
-let musicPlaying=null,musicNodes=[],musicTimer=null,musicVol=0.08;
+let musicPlaying=null,musicNodes=[],musicTimer=null,musicVol=0.08,musicEnabled=localStorage.getItem('arenaMusic')!=='off';
 function stopMusic(){musicNodes.forEach(n=>{try{n.stop();}catch(e){}});musicNodes=[];if(musicTimer)clearInterval(musicTimer);musicTimer=null;musicPlaying=null;}
 function playNote(freq,dur,type,vol,delay){
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
@@ -341,7 +365,7 @@ const TRACKS={
 };
 function startMusic(track){
   if(musicPlaying===track)return;
-  stopMusic();ensureAudio();
+  stopMusic();if(!musicEnabled)return;ensureAudio();
   const t=TRACKS[track];if(!t)return;
   musicPlaying=track;let beat=0;
   const interval=60000/t.bpm/2;
@@ -367,7 +391,20 @@ function playSound(type){
 }
 
 // === SKIN DRAWING ===
-function drawSkin(c,x,y,r,color,skin,angle){
+function drawSkin(c,x,y,r,color,skin,angle,hat,cape){
+  // Cape (behind player)
+  if(cape&&cape!=='none'){
+    c.save();c.translate(x,y);c.rotate(angle||0);
+    c.globalAlpha=0.7;
+    switch(cape){
+      case'short':c.fillStyle=color;c.beginPath();c.moveTo(-r*0.5,-r*0.2);c.lineTo(0,-r*1.4);c.lineTo(r*0.5,-r*0.2);c.fill();break;
+      case'long':c.fillStyle=color;c.beginPath();c.moveTo(-r*0.6,-r*0.1);c.lineTo(-r*0.3,-r*2);c.lineTo(r*0.3,-r*2);c.lineTo(r*0.6,-r*0.1);c.fill();break;
+      case'tattered':c.fillStyle=color;for(let i=-2;i<=2;i++){c.beginPath();c.moveTo(i*r*0.25,-r*0.2);c.lineTo(i*r*0.2,-r*(1.3+Math.abs(i)*0.2));c.lineTo(i*r*0.25+r*0.15,-r*0.2);c.fill();}break;
+      case'flame':const grad=c.createLinearGradient(0,0,0,-r*2);grad.addColorStop(0,color);grad.addColorStop(0.5,'#ff4400');grad.addColorStop(1,'#ffcc00');c.fillStyle=grad;c.beginPath();c.moveTo(-r*0.5,-r*0.1);c.quadraticCurveTo(-r*0.8,-r*1.2,0,-r*2);c.quadraticCurveTo(r*0.8,-r*1.2,r*0.5,-r*0.1);c.fill();break;
+    }
+    c.globalAlpha=1;c.restore();
+  }
+  // Body
   c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();
   c.strokeStyle='#fff';c.lineWidth=2;c.stroke();
   c.save();c.translate(x,y);c.rotate(angle||0);
@@ -379,19 +416,54 @@ function drawSkin(c,x,y,r,color,skin,angle){
     case'skull':c.fillStyle='rgba(255,255,255,0.7)';c.beginPath();c.arc(-4,-3,3,0,Math.PI*2);c.fill();c.beginPath();c.arc(4,-3,3,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(-3,4);c.lineTo(3,4);c.stroke();break;
   }
   c.restore();
+  // Hat (on top)
+  if(hat&&hat!=='none'){
+    c.save();c.translate(x,y);c.rotate(angle||0);
+    switch(hat){
+      case'crown':c.fillStyle='#ffd700';c.beginPath();c.moveTo(-r*0.6,r*0.1);c.lineTo(-r*0.5,-r*0.5);c.lineTo(-r*0.2,-r*0.2);c.lineTo(0,-r*0.7);c.lineTo(r*0.2,-r*0.2);c.lineTo(r*0.5,-r*0.5);c.lineTo(r*0.6,r*0.1);c.closePath();c.fill();c.strokeStyle='#aa8800';c.lineWidth=1;c.stroke();break;
+      case'horns':c.strokeStyle='#cc4444';c.lineWidth=3;c.beginPath();c.moveTo(-r*0.4,0);c.quadraticCurveTo(-r*1,-r*0.5,-r*0.7,-r*0.9);c.stroke();c.beginPath();c.moveTo(r*0.4,0);c.quadraticCurveTo(r*1,-r*0.5,r*0.7,-r*0.9);c.stroke();break;
+      case'halo':c.strokeStyle='#ffdd44';c.lineWidth=2;c.globalAlpha=0.8;c.beginPath();c.ellipse(0,-r*0.8,r*0.6,r*0.15,0,0,Math.PI*2);c.stroke();c.globalAlpha=1;break;
+      case'antenna':c.strokeStyle='#44ff44';c.lineWidth=2;c.beginPath();c.moveTo(0,-r*0.3);c.lineTo(0,-r*1.2);c.stroke();c.fillStyle='#44ff44';c.beginPath();c.arc(0,-r*1.2,3,0,Math.PI*2);c.fill();break;
+      case'tophat':c.fillStyle='#222';c.fillRect(-r*0.4,-r*0.1,r*0.8,r*0.15);c.fillRect(-r*0.25,-r*0.7,r*0.5,r*0.6);c.strokeStyle='#555';c.lineWidth=1;c.strokeRect(-r*0.25,-r*0.7,r*0.5,r*0.6);break;
+      case'bandana':c.fillStyle='#cc2222';c.beginPath();c.arc(0,0,r*1.05,Math.PI*0.8,Math.PI*0.2,true);c.lineTo(r*0.3,-r*0.1);c.lineTo(r*0.8,-r*0.3);c.closePath();c.fill();break;
+      case'mohawk':c.fillStyle='#ff44ff';for(let i=-2;i<=2;i++){c.beginPath();c.moveTo(i*r*0.15,-r*0.3);c.lineTo(i*r*0.15-r*0.06,-r*(0.7+Math.abs(i)*0.15));c.lineTo(i*r*0.15+r*0.06,-r*(0.7+Math.abs(i)*0.15));c.closePath();c.fill();}break;
+    }
+    c.restore();
+  }
 }
 
 function drawPreview(){
-  pctx.clearRect(0,0,60,60);
-  drawSkin(pctx,30,30,20,myColor,mySkin,0);
+  pctx.clearRect(0,0,80,80);
+  drawSkin(pctx,40,45,20,myColor,mySkin,Math.PI/2,myHat,myCape);
 }
 
 // === CUSTOMIZE UI ===
+const COLOR_PALETTE=['#cc3333','#cc6633','#ccaa33','#33aa33','#33aa88','#3366cc','#6633cc','#cc33cc','#cc3366','#dddddd','#888888','#774422','#338866','#6699bb','#cc8866','#9955bb'];
+function buildColorGrid(){
+  document.getElementById('colorGrid').innerHTML=COLOR_PALETTE.map(c=>
+    `<div class="color-swatch${myColor===c?' active':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`
+  ).join('');
+}
+window.pickColor=function(c){myColor=c;buildColorGrid();drawPreview();sendCustomize();playSound('click');};
 function buildSkinRow(){
   document.getElementById('skinRow').innerHTML=skins.map(s=>
     `<button class="skin-btn${mySkin===s?' active':''}" onclick="pickSkin('${s}')">${s}</button>`
   ).join('');
 }
+function buildHatRow(){
+  const icons={none:'❌',crown:'👑',horns:'😈',halo:'😇',antenna:'👽',tophat:'🎩',bandana:'🏴‍☠️',mohawk:'🦄'};
+  document.getElementById('hatRow').innerHTML=hats.map(h=>
+    `<button class="hat-btn${myHat===h?' active':''}" onclick="pickHat('${h}')">${icons[h]||h} ${h}</button>`
+  ).join('');
+}
+window.pickHat=function(h){myHat=h;buildHatRow();drawPreview();sendCustomize();playSound('click');};
+function buildCapeRow(){
+  const icons={none:'❌',short:'🧣',long:'🦸',tattered:'💀',flame:'🔥'};
+  document.getElementById('capeRow').innerHTML=capes.map(c=>
+    `<button class="cape-btn${myCape===c?' active':''}" onclick="pickCape('${c}')">${icons[c]||c} ${c}</button>`
+  ).join('');
+}
+window.pickCape=function(c){myCape=c;buildCapeRow();drawPreview();sendCustomize();playSound('click');};
 function buildLoadoutRow(){
   document.getElementById('loadoutRow').innerHTML=allWeaponKeys.map(wk=>{
     const w=allWeapons[wk],inLoadout=myLoadout.includes(wk);
@@ -409,22 +481,21 @@ window.toggleWeapon=function(wk){
 };
 
 document.getElementById('nameInput').addEventListener('input',e=>{myName=e.target.value||'Player';sendCustomize();});
-document.getElementById('colorInput').addEventListener('input',e=>{myColor=e.target.value;drawPreview();sendCustomize();playSound('click');});
 
 function sendCustomize(){
-  socket.emit('customize',{name:myName,color:myColor,skin:mySkin,loadout:myLoadout.length===3?myLoadout:undefined});
-  try{localStorage.setItem('arenaProfile',JSON.stringify({name:myName,color:myColor,skin:mySkin,loadout:myLoadout}));}catch(e){}
+  socket.emit('customize',{name:myName,color:myColor,skin:mySkin,hat:myHat,cape:myCape,loadout:myLoadout.length===3?myLoadout:undefined});
+  try{localStorage.setItem('arenaProfile',JSON.stringify({name:myName,color:myColor,skin:mySkin,hat:myHat,cape:myCape,loadout:myLoadout}));}catch(e){}
 }
 
 // === NETWORK ===
 socket.on('init',d=>{
-  myId=d.id;W=d.w;H=d.h;allWeapons=d.weapons;allWeaponKeys=d.weaponKeys;skins=d.skins;perkIcons=d.perkIcons||{};
+  myId=d.id;W=d.w;H=d.h;allWeapons=d.weapons;allWeaponKeys=d.weaponKeys;skins=d.skins;hats=d.hats||[];capes=d.capes||[];perkIcons=d.perkIcons||{};
   // only use defaults if no saved profile
   try{const s=JSON.parse(localStorage.getItem('arenaProfile'));if(s&&s.loadout)myLoadout=s.loadout;else myLoadout=[...d.defaultLoadout];}catch(e){myLoadout=[...d.defaultLoadout];}
   canvas.width=W;canvas.height=H;overlay.classList.add('hidden');
   document.getElementById('nameInput').value=myName;
-  document.getElementById('colorInput').value=myColor;
-  buildSkinRow();buildLoadoutRow();drawPreview();applyLang();
+  buildColorGrid();buildSkinRow();buildHatRow();buildCapeRow();buildLoadoutRow();drawPreview();applyLang();
+  document.getElementById('musicBtn').textContent=musicEnabled?'🔊 Music On':'🔇 Music Off';
   sendCustomize();
 });
 socket.on('full',()=>{msgEl.textContent=t('gameFull');});
@@ -630,7 +701,7 @@ function draw(){
     if(perks.includes('magnet')){ctx.beginPath();ctx.arc(p.x,p.y,PLAYER_R+96,0,Math.PI*2);ctx.strokeStyle='#ff44ff11';ctx.lineWidth=1;ctx.stroke();}
 
     // speedster trail
-    if(perks.includes('speedster')){ctx.globalAlpha*=0.3;drawSkin(ctx,p.x-Math.cos(p.angle)*8,p.y-Math.sin(p.angle)*8,pr,p.color,p.skin||'solid',p.angle);ctx.globalAlpha=isGhost?(p.id===myId?0.4:0.15):1;}
+    if(perks.includes('speedster')){ctx.globalAlpha*=0.3;drawSkin(ctx,p.x-Math.cos(p.angle)*8,p.y-Math.sin(p.angle)*8,pr,p.color,p.skin||'solid',p.angle,p.hat,p.cape);ctx.globalAlpha=isGhost?(p.id===myId?0.4:0.15):1;}
 
     if(eff.includes('gravity')){ctx.beginPath();ctx.arc(p.x,p.y,120,0,Math.PI*2);ctx.strokeStyle='#6633cc33';ctx.lineWidth=1;ctx.stroke();for(let i=0;i<5;i++){const a=tick*0.05+i*Math.PI*2/5,r=60+Math.sin(tick*0.1+i)*40;ctx.beginPath();ctx.arc(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,3,0,Math.PI*2);ctx.fillStyle='#6633cc';ctx.fill();}}
     if(eff.includes('mirror')){ctx.beginPath();ctx.arc(p.x,p.y,pr+6,0,Math.PI*2);ctx.strokeStyle=`hsl(${tick*4%360},80%,70%)`;ctx.lineWidth=3;ctx.stroke();}
@@ -640,7 +711,7 @@ function draw(){
     if(p.shielded){ctx.beginPath();ctx.arc(p.x,p.y,pr+6,0,Math.PI*2);ctx.strokeStyle=`rgba(100,200,255,${0.4+Math.sin(tick*0.2)*0.2})`;ctx.lineWidth=3;ctx.stroke();}
 
     // body with skin (scaled)
-    drawSkin(ctx,p.x,p.y,pr,p.color,p.skin||'solid',p.angle);
+    drawSkin(ctx,p.x,p.y,pr,p.color,p.skin||'solid',p.angle,p.hat,p.cape);
     if(isMe){ctx.beginPath();ctx.arc(p.x,p.y,pr+2,0,Math.PI*2);ctx.strokeStyle='#ffffff44';ctx.lineWidth=1;ctx.stroke();}
 
     // barrel(s) — shrapnel gets 3 barrels
