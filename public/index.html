@@ -189,7 +189,7 @@ socket.on('gameStart',d=>{
   phase='playing';lobbyEl.classList.remove('active');
   canvas.style.display='block';backBtn.classList.add('show');
   mapColor=d.mapData.color;currentWeapon=0;
-  gameMode=d.mode||'ffa';gameOverMsg=null;killFeed=[];
+  gameMode=d.mode||'ffa';gameOverMsg=null;killFeed=[];respawnTimer=0;
 });
 socket.on('toLobby',()=>{phase='lobby';state=null;gameOverMsg=null;});
 socket.on('state',s=>{state=s;if(s.mapColor)mapColor=s.mapColor;});
@@ -296,6 +296,7 @@ function draw(){
     if(eff.includes('frozen')){ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.strokeStyle='#66ffff99';ctx.lineWidth=4;ctx.stroke();}
     if(eff.includes('regen')){const pulse=1+Math.sin(tick*.15)*.3;ctx.beginPath();ctx.arc(p.x,p.y,20*pulse,0,Math.PI*2);ctx.strokeStyle='#00ff6644';ctx.lineWidth=2;ctx.stroke();}
     if(eff.includes('pierce')){ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.strokeStyle='#ff880066';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);}
+    if(p.shielded){ctx.beginPath();ctx.arc(p.x,p.y,PLAYER_R+6,0,Math.PI*2);ctx.strokeStyle=`rgba(100,200,255,${0.4+Math.sin(tick*0.2)*0.2})`;ctx.lineWidth=3;ctx.stroke();}
 
     // body with skin
     drawSkin(ctx,p.x,p.y,PLAYER_R,p.color,p.skin||'solid',p.angle);

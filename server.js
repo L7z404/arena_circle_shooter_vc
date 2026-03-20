@@ -72,7 +72,7 @@ function createRoom(mapKey,creatorIds,mode){
     room.players[sid]={id:sid,idx,x:sp.x,y:sp.y,angle:0,hp:100,maxHp:100,
       color:prof.color||'#ff4444',name:prof.name||'Player',skin:prof.skin||'solid',
       loadout:prof.loadout||[...DEFAULT_LOADOUT],
-      lastShot:0,keys:{},weapon:wep,effects:{}};
+      lastShot:0,keys:{},weapon:wep,effects:{},spawnShield:Date.now()+3000};
     room.scores[sid]=0;
     if(mode==='gungame')room.gunProgress[sid]=0;
     playerRoom[sid]=id;
@@ -90,7 +90,7 @@ function addBotToRoom(room,idx){
   room.players[bid]={id:bid,idx,x:sp.x,y:sp.y,angle:0,hp:100,maxHp:100,
     color:BOT_COLORS[idx%3],name:BOT_NAMES[idx%3],skin:BOT_SKINS[idx%3],
     loadout,lastShot:0,keys:{},weapon:wep,effects:{},isBot:true,
-    botDir:Math.random()*Math.PI*2,botDirTimer:0,botStrafe:1};
+    botDir:Math.random()*Math.PI*2,botDirTimer:0,botStrafe:1,spawnShield:Date.now()+3000};
   room.scores[bid]=0;room.bots[bid]=room.players[bid];
   if(room.mode==='gungame')room.gunProgress[bid]=0;
 }
@@ -232,6 +232,7 @@ io.on('connection',socket=>{
   socket.on('shoot',()=>{
     const rid=playerRoom[socket.id];if(!rid||!rooms[rid])return;
     const room=rooms[rid],p=room.players[socket.id];if(!p||p.dead)return;
+    if(p.spawnShield&&Date.now()<p.spawnShield)return;
     const now=Date.now(),w=WEAPONS[p.weapon];
     if(now-p.lastShot<w.cd)return;
     p.lastShot=now;
@@ -281,7 +282,7 @@ function tickBotInRoom(room,bot){
     }
     if(dist<400){
       const now=Date.now(),w=WEAPONS[bot.weapon];
-      if(now-bot.lastShot>=w.cd){
+      if(now-bot.lastShot>=w.cd&&!(bot.spawnShield&&now<bot.spawnShield)){
         bot.lastShot=now;const isPierce=hasEffect(bot,'pierce');
         for(let i=0;i<w.count;i++){
           const a=bot.angle+(w.count>1?(i-(w.count-1)/2)*w.spread:(Math.random()-0.5)*w.spread);
@@ -318,7 +319,7 @@ function tickRoom(room){
   // respawn dead players
   for(const p of Object.values(room.players)){
     if(p.dead&&now>=p.respawnAt){
-      p.dead=false;p.hp=100;p.maxHp=100;
+      p.dead=false;p.hp=100;p.maxHp=100;p.spawnShield=Date.now()+3000;
       const sp=randomSpawnInMap(room.mapKey,p.x,p.y);p.x=sp.x;p.y=sp.y;
       if(p.isBot){p.botDir=Math.random()*Math.PI*2;p.botDirTimer=0;p.botStrafe=1;}
       else io.to(p.id).emit('respawn');
@@ -346,7 +347,7 @@ function tickRoom(room){
       if((p.x-pu.x)**2+(p.y-pu.y)**2<(PLAYER_R+16)**2){
         if(pu.duration>0)p.effects[pu.type]=now+pu.duration;
         else if(pu.type==='freeze'){for(const o of Object.values(room.players)){if(o.id!==p.id)o.effects.frozen=now+2000;}}
-        else if(pu.type==='nuke'){for(const o of Object.values(room.players)){if(o.id!==p.id){o.hp-=40;if(o.hp<=0)killPlayerInRoom(room,o,p.id);}}io.to(room.id).emit('explosion',{x:p.x,y:p.y});}
+        else if(pu.type==='nuke'){for(const o of Object.values(room.players)){if(o.id!==p.id&&!(o.spawnShield&&Date.now()<o.spawnShield)){o.hp-=40;if(o.hp<=0)killPlayerInRoom(room,o,p.id);}}io.to(room.id).emit('explosion',{x:p.x,y:p.y});}
         else if(pu.type==='teleport'){const sp=MAPS[room.mapKey].spawns[Math.floor(Math.random()*MAPS[room.mapKey].spawns.length)];p.x=sp.x;p.y=sp.y;}
         if(!p.isBot)io.to(p.id).emit('pickup',pu.type);
         room.powerups.splice(i,1);
@@ -373,11 +374,11 @@ function tickRoom(room){
     if(b.x<0||b.x>W||b.y<0||b.y>H)return false;
     if(!b.pierce){for(const o of obs){if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h){if(b.explosive)io.to(room.id).emit('explosion',{x:b.x,y:b.y});return false;}}}
     for(const p of Object.values(room.players)){
-      if(p.id===b.owner||p.dead||hasEffect(p,'ghost'))continue;
+      if(p.id===b.owner||p.dead||hasEffect(p,'ghost')||(p.spawnShield&&Date.now()<p.spawnShield))continue;
       if((p.x-b.x)**2+(p.y-b.y)**2<(PLAYER_R+b.size)**2){
         let dmg=b.dmg;if(b.fire)dmg*=1.3;
         if(hasEffect(p,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=dmg;if(sh.hp<=0)killPlayerInRoom(room,sh,p.id);else if(!sh.isBot)io.to(sh.id).emit('hit');}return false;}
-        if(b.explosive){io.to(room.id).emit('explosion',{x:b.x,y:b.y});for(const op of Object.values(room.players)){if(op.id===b.owner||hasEffect(op,'ghost'))continue;const d=Math.sqrt((op.x-b.x)**2+(op.y-b.y)**2);if(d<80){let sp=dmg*(1-d/80);if(hasEffect(op,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=sp;if(sh.hp<=0)killPlayerInRoom(room,sh,op.id);}}else op.hp-=sp;}}}
+        if(b.explosive){io.to(room.id).emit('explosion',{x:b.x,y:b.y});for(const op of Object.values(room.players)){if(op.id===b.owner||hasEffect(op,'ghost')||(op.spawnShield&&Date.now()<op.spawnShield))continue;const d=Math.sqrt((op.x-b.x)**2+(op.y-b.y)**2);if(d<80){let sp=dmg*(1-d/80);if(hasEffect(op,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=sp;if(sh.hp<=0)killPlayerInRoom(room,sh,op.id);}}else op.hp-=sp;}}}
         else p.hp-=dmg;
         if(p.hp<=0)killPlayerInRoom(room,p,b.owner);else if(!p.isBot)io.to(p.id).emit('hit');
         return false;
@@ -397,7 +398,8 @@ function tickRoom(room){
       color:p.color,name:p.name,skin:p.skin,dead:!!p.dead,
       score:room.scores[p.id]||0,weapon:p.weapon,loadout:p.loadout,
       lastShot:p.lastShot,
-      effects:Object.keys(p.effects).filter(t=>now<p.effects[t])
+      effects:Object.keys(p.effects).filter(t=>now<p.effects[t]),
+      shielded:!!(p.spawnShield&&now<p.spawnShield)
     })),
     bullets:room.bullets.map(b=>({x:b.x,y:b.y,color:b.color,size:b.size})),
     obstacles:obs,
