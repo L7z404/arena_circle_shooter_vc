@@ -72,14 +72,14 @@ input[type=color]{width:40px;height:32px;border:none;background:none;cursor:poin
     <div class="row" id="botMapRow"></div>
     <button class="bot-btn" onclick="startBotGame()" style="background:#44aa44;margin-top:4px">⚔ Play vs Bots (random map)</button>
     <button class="bot-btn" onclick="startBotGame(null,'gungame')" style="background:#aa8844;margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
-    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:#8844aa;margin-top:4px">⚔ Arms Race vs Bots (random map)</button>
+    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:#8844aa;margin-top:4px">💀 Chaos Mode vs Bots (random map)</button>
   </div>
 
   <div class="controls-hint">
     WASD move · Mouse aim · Click shoot · 1/2/3 switch loadout weapon · Scroll to cycle<br>
     Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce 🔄Ricochet
   </div>
-  <button id="langBtn" onclick="setLang(lang==='en'?'es':'en')" style="margin-top:8px;padding:8px 16px;border-radius:6px;border:1px solid #555;background:#222;color:#fff;cursor:pointer;font-size:14px">🇪🇸 Español</button>
+  <button id="langBtn" onclick="window.setLang(document.getElementById('langBtn').textContent.includes('Español')?'es':'en')" style="margin-top:8px;padding:8px 16px;border-radius:6px;border:1px solid #555;background:#222;color:#fff;cursor:pointer;font-size:14px">🇪🇸 Español</button>
 </div>
 <button id="backBtn" onclick="socket.emit('backToLobby')">← Lobby</button>
 <canvas id="c"></canvas>
@@ -99,7 +99,7 @@ en:{
   loadout:'🔫 Loadout',pick3:'(pick 3)',voteMap:'🗺 Vote for Map',
   singleplayer:'🤖 Singleplayer',spDesc:'Play against bots — pick a map below or random',
   botRandom:'⚔ Play vs Bots (random map)',gunGame:'🔫 Gun Game vs Bots (random map)',
-  armsRace:'⚔ Arms Race vs Bots (random map)',
+  armsRace:'💀 Chaos Mode vs Bots (random map)',
   controls:'WASD move · Mouse aim · Click shoot · 1/2/3 switch loadout weapon · Scroll to cycle',
   powerups:'Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce 🔄Ricochet',
   backLobby:'← Lobby',youDied:'YOU DIED',respawning:'Respawning in','respawning2':'Respawning...',
@@ -116,7 +116,7 @@ es:{
   loadout:'🔫 Equipamiento',pick3:'(elige 3)',voteMap:'🗺 Votar Mapa',
   singleplayer:'🤖 Un Jugador',spDesc:'Juega contra bots — elige un mapa o aleatorio',
   botRandom:'⚔ Jugar vs Bots (mapa aleatorio)',gunGame:'🔫 Gun Game vs Bots (mapa aleatorio)',
-  armsRace:'⚔ Arms Race vs Bots (mapa aleatorio)',
+  armsRace:'💀 Modo Caos vs Bots (mapa aleatorio)',
   controls:'WASD mover · Ratón apuntar · Click disparar · 1/2/3 cambiar arma · Scroll para ciclar',
   powerups:'Poderes: 👻Fantasma 🪞Espejo 🌀Gravedad ❄Congelar ☢Nuke ✦Teletransporte 💚Regen 🔱Perforar 🔄Rebote',
   backLobby:'← Lobby',youDied:'MORISTE',respawning:'Reapareciendo en','respawning2':'Reapareciendo...',
@@ -129,8 +129,39 @@ es:{
 }
 };
 let lang=localStorage.getItem('arenaLang')||'en';
+const PERK_ES={
+  ricochet:{label:'Rebote',desc:'Las balas rebotan en paredes 3 veces'},
+  bigbullets:{label:'Balas Grandes',desc:'Balas 2x más grandes'},
+  extralife:{label:'Vida Extra',desc:'+50 HP máximo'},
+  explosive:{label:'Rondas Explosivas',desc:'Todas las balas explotan al impactar'},
+  nocd:{label:'Sin Enfriamiento',desc:'Velocidad de disparo duplicada'},
+  tesla:{label:'Campo Tesla',desc:'Electrocuta enemigos cercanos 3 dmg/tick'},
+  heavyhitter:{label:'Golpe Pesado',desc:'2x daño pero balas 40% más lentas'},
+  vampire:{label:'Vampiro',desc:'Cura 20% del daño infligido'},
+  speedster:{label:'Veloz',desc:'Muévete 40% más rápido'},
+  tinyterror:{label:'Terror Diminuto',desc:'Hitbox más pequeño (60% radio)'},
+  shrapnel:{label:'Metralla',desc:'+2 balas extra por disparo'},
+  sniperbuff:{label:'Tiro Largo',desc:'Balas viajan 50% más rápido'},
+  homing:{label:'Rastreo',desc:'Balas se curvan hacia el enemigo más cercano'},
+  thorns:{label:'Espinas',desc:'Devuelve 15 dmg al ser golpeado'},
+  regen2:{label:'Regeneración',desc:'Regenera 2 HP/seg'},
+  splitshot:{label:'Disparo Dividido',desc:'Balas se dividen en 3 al golpear pared'},
+  gravity2:{label:'Pozo Gravitatorio',desc:'Atrae enemigos cercanos hacia ti'},
+  dash:{label:'Impulso',desc:'25% más rápido + escudo más largo al reaparecer'},
+  clone:{label:'Disparo Clon',desc:'Dispara otra ráfaga 0.2s después'},
+  poison:{label:'Veneno',desc:'Balas aplican veneno 3s (5 dmg/seg)'},
+  shield2:{label:'Armadura',desc:'+25 HP máx y reduce daño recibido 15%'},
+  magnet:{label:'Imán de Balas',desc:'Atrae poderes desde más lejos'},
+  rage:{label:'Furia',desc:'+30% daño cuando tienes menos de 50% HP'},
+  miniturret:{label:'Torreta',desc:'Dispara automáticamente al enemigo más cercano cada 0.5s'},
+};
+function tPerk(pk){
+  if(lang==='es'&&PERK_ES[pk.id])return{...pk,label:PERK_ES[pk.id].label,desc:PERK_ES[pk.id].desc};
+  return pk;
+}
 function t(k){return LANG[lang][k]||LANG.en[k]||k;}
 function setLang(l){lang=l;localStorage.setItem('arenaLang',l);applyLang();}
+window.setLang=setLang;
 function applyLang(){
   document.querySelector('#lobby h1').textContent=t('title');
   document.querySelectorAll('#lobby .section h2')[0].textContent=t('customize');
@@ -596,8 +627,9 @@ function draw(){
 
     if(draftOverlay.picked){
       const chosenPerk=draftOverlay.offered.find(p=>p.id===draftOverlay.chosenId);
+      const cp=chosenPerk?tPerk(chosenPerk):null;
       ctx.fillStyle='#88ff88';ctx.font='bold 28px sans-serif';
-      ctx.fillText(`${t('youChose')} ${chosenPerk?chosenPerk.icon+' '+chosenPerk.label:'???'}`,W/2,H/2-20);
+      ctx.fillText(`${t('youChose')} ${cp?cp.icon+' '+cp.label:'???'}`,W/2,H/2-20);
       ctx.fillStyle='#aaa';ctx.font='16px sans-serif';
       ctx.fillText(t('waitOthers2'),W/2,H/2+20);
     } else if(draftOverlay.skipped){
@@ -613,7 +645,7 @@ function draw(){
       const startX=(W-totalW)/2,by=H/2-bh/2;
       draftOverlay._buttons=[];
       for(let i=0;i<offered.length;i++){
-        const pk=offered[i],bx=startX+i*(bw+gap);
+        const pk=tPerk(offered[i]),bx=startX+i*(bw+gap);
         draftOverlay._buttons.push({id:pk.id,x:bx,y:by,w:bw,h:bh});
         const hover=mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh;
         ctx.fillStyle=hover?'#444':'#2a2a2a';ctx.fillRect(bx,by,bw,bh);
@@ -631,7 +663,8 @@ function draw(){
     if(picks.length){
       ctx.textAlign='left';ctx.font='14px sans-serif';ctx.fillStyle='#88ff88';
       for(let i=0;i<picks.length;i++){
-        ctx.fillText(`✓ ${picks[i].name} ${t('chose')} ${picks[i].perk}`,20,H-60-i*20);
+        const pn=PERK_ES[picks[i].perk]&&lang==='es'?PERK_ES[picks[i].perk].label:picks[i].perk;
+        ctx.fillText(`✓ ${picks[i].name} ${t('chose')} ${pn}`,20,H-60-i*20);
       }
     }
   }
