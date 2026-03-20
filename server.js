@@ -37,7 +37,13 @@ const DRAFT_PERKS=[
   {id:'regen2',label:'Regen',icon:'💚',desc:'Regenerate 2 HP/sec'},
   {id:'splitshot',label:'Split Shot',icon:'🔱',desc:'Bullets split into 3 on wall hit'},
   {id:'gravity2',label:'Gravity Well',icon:'🕳',desc:'Pull nearby enemies toward you'},
-  {id:'dash',label:'Dash',icon:'🏃',desc:'Move 25% faster + phase through bullets briefly after respawn'},
+  {id:'dash',label:'Dash',icon:'🏃',desc:'Move 25% faster + longer spawn shield'},
+  {id:'clone',label:'Clone Shot',icon:'👥',desc:'Fire a second volley 0.2s after each shot'},
+  {id:'poison',label:'Poison',icon:'☠',desc:'Bullets apply 3s poison (5 dmg/sec)'},
+  {id:'shield2',label:'Armor',icon:'🛡',desc:'+25 max HP and reduce incoming dmg by 15%'},
+  {id:'magnet',label:'Bullet Magnet',icon:'🧲',desc:'Attract nearby powerups from further away'},
+  {id:'rage',label:'Rage',icon:'😡',desc:'+30% damage when below 50% HP'},
+  {id:'miniturret',label:'Turret',icon:'🗼',desc:'Auto-fire a weak bullet at nearest enemy every 0.5s'},
 ];
 const MAPS={
   arena:{label:'Arena',desc:'Classic arena with cover walls',
@@ -122,6 +128,7 @@ function addBotToRoom(room,idx){
     botDir:Math.random()*Math.PI*2,botDirTimer:0,botStrafe:1,spawnShield:Date.now()+3000};
   room.scores[bid]=0;room.bots[bid]=room.players[bid];
   if(room.mode==='gungame')room.gunProgress[bid]=0;
+  if(room.mode==='draft'){room.playerPerks[bid]=[];room.roundScores[bid]=0;}
 }
 
 function destroyRoom(roomId){delete rooms[roomId];}
@@ -177,7 +184,7 @@ function startDraftRound(room){
   const map=MAPS[room.mapKey];let idx=0;
   for(const p of Object.values(room.players)){
     const sp=map.spawns[idx%map.spawns.length];
-    p.x=sp.x;p.y=sp.y;p.hp=100+hasPerk(room,p.id,'extralife')*50;
+    p.x=sp.x;p.y=sp.y;p.hp=100+hasPerk(room,p.id,'extralife')*50+hasPerk(room,p.id,'shield2')*25;
     p.maxHp=p.hp;p.dead=false;p.effects={};p.spawnShield=Date.now()+3000;
     idx++;
   }
@@ -206,8 +213,16 @@ function endDraftRound(room){
   room.draftOffered=offered;
   room.draftChoices={};
   if(bestPid)room.draftChoices[bestPid]='_skip_';
+  // bots auto-pick random perk (unless they won)
+  for(const pid of Object.keys(room.bots)){
+    if(pid===bestPid)continue;
+    room.draftChoices[pid]=offered[Math.floor(Math.random()*offered.length)].id;
+  }
   io.to(room.id).emit('draftPick',{offered,roundWinner:bestPid,round:room.round,maxRounds:room.maxRounds,
     perks:room.playerPerks,scores:room.scores});
+  // if all picked (solo + bots), auto-finish
+  const allPicked=Object.keys(room.players).every(pid=>room.draftChoices[pid]);
+  if(allPicked)setTimeout(()=>finishDraft(room),500);
 }
 
 function finishDraft(room){
@@ -285,6 +300,7 @@ io.on('connection',socket=>{
     for(let i=0;i<4;i++){if(!taken.has(i))addBotToRoom(room,i);}
     spawnPowerupInRoom(room);
     socket.emit('gameStart',{map:mapKey,mode,mapData:{obstacles:MAPS[mapKey].obstacles,color:MAPS[mapKey].color}});
+    if(mode==='draft')startDraftRound(room);
     sendLobby();
   });
 
@@ -351,14 +367,33 @@ io.on('connection',socket=>{
     const ricoN=hasPerk(room,socket.id,'ricochet');
     const homN=hasPerk(room,socket.id,'homing');
     const splN=hasPerk(room,socket.id,'splitshot');
+    const poisN=hasPerk(room,socket.id,'poison');
     for(let i=0;i<cnt;i++){
       const spread=cnt>1?w.spread||(sh?0.15:0):0;
       const a=p.angle+(cnt>1?(i-(cnt-1)/2)*spread:(Math.random()-0.5)*w.spread);
       room.bullets.push({x:p.x+Math.cos(a)*(PLAYER_R+8),y:p.y+Math.sin(a)*(PLAYER_R+8),
         vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-        owner:socket.id,color:p.color,dmg:dmg,size:sz,
+        owner:socket.id,color:poisN?'#44ff44':p.color,dmg:dmg,size:sz,
         fire:false,electric:false,explosive:expl,pierce:isPierce,ricochet:isRico,bounces:isRico?(2+ricoN*2):0,
-        homing:homN,origSpd:spd,splitN:splN,isSplit:false});
+        homing:homN,origSpd:spd,splitN:splN,isSplit:false,poisonN:poisN});
+    }
+    // clone shot: fire again after delay
+    const cloneN=hasPerk(room,socket.id,'clone');
+    if(cloneN){
+      setTimeout(()=>{
+        if(!room||room.gameOver||!room.players[socket.id]||room.players[socket.id].dead)return;
+        const cp=room.players[socket.id];
+        for(let c=0;c<cloneN;c++){
+          for(let i=0;i<cnt;i++){
+            const spread2=cnt>1?w.spread||(sh?0.15:0):0;
+            const a=cp.angle+(cnt>1?(i-(cnt-1)/2)*spread2:(Math.random()-0.5)*w.spread);
+            room.bullets.push({x:cp.x+Math.cos(a)*(PLAYER_R+8),y:cp.y+Math.sin(a)*(PLAYER_R+8),
+              vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,owner:socket.id,color:cp.color,dmg:dmg*0.6,size:sz,
+              fire:false,electric:false,explosive:expl,pierce:isPierce,ricochet:isRico,bounces:isRico?(2+ricoN*2):0,
+              homing:homN,origSpd:spd,splitN:splN,isSplit:false,poisonN:poisN});
+          }
+        }
+      },200);
     }
   });
 
@@ -381,7 +416,9 @@ function tickBotInRoom(room,bot){
     if(p.id===bot.id||p.dead||hasEffect(p,'ghost'))continue;
     const d=(p.x-bot.x)**2+(p.y-bot.y)**2;if(d<minD){minD=d;target=p;}
   }
-  const spd=hasEffect(bot,'x2speed')?SPEED*2:SPEED;
+  let spd=hasEffect(bot,'x2speed')?SPEED*2:SPEED;
+  const bsn=hasPerk(room,bot.id,'speedster');if(bsn)spd*=1+bsn*0.35;
+  const bdn=hasPerk(room,bot.id,'dash');if(bdn)spd*=1+bdn*0.2;
   const prevX=bot.x,prevY=bot.y;
 
   if(target){
@@ -397,13 +434,26 @@ function tickBotInRoom(room,bot){
     }
     if(dist<400){
       const now=Date.now(),w=WEAPONS[bot.weapon];
-      if(now-bot.lastShot>=w.cd&&!(bot.spawnShield&&now<bot.spawnShield)){
-        bot.lastShot=now;const isPierce=hasEffect(bot,'pierce'),isRico=hasEffect(bot,'ricochet');
-        for(let i=0;i<w.count;i++){
-          const a=bot.angle+(w.count>1?(i-(w.count-1)/2)*w.spread:(Math.random()-0.5)*w.spread);
+      let bcd=w.cd;const bncd=hasPerk(room,bot.id,'nocd');if(bncd)bcd=Math.floor(bcd*Math.pow(0.6,bncd));
+      if(now-bot.lastShot>=bcd&&!(bot.spawnShield&&now<bot.spawnShield)){
+        bot.lastShot=now;
+        const isPierce=hasEffect(bot,'pierce'),isRico=hasEffect(bot,'ricochet')||hasPerk(room,bot.id,'ricochet');
+        let bdmg=w.dmg,bspd=w.speed,bsz=w.size,bcnt=w.count,bexpl=!!w.explosive;
+        const bbb=hasPerk(room,bot.id,'bigbullets');if(bbb)bsz=Math.round(bsz*(1+bbb*0.8));
+        if(hasPerk(room,bot.id,'explosive'))bexpl=true;
+        const bhh=hasPerk(room,bot.id,'heavyhitter');if(bhh){bdmg*=1+bhh;bspd*=Math.pow(0.7,bhh);}
+        const bsh=hasPerk(room,bot.id,'shrapnel');if(bsh)bcnt+=bsh*2;
+        const bsb=hasPerk(room,bot.id,'sniperbuff');if(bsb)bspd*=1+bsb*0.4;
+        const bricoN=hasPerk(room,bot.id,'ricochet');
+        const bhomN=hasPerk(room,bot.id,'homing');
+        const bsplN=hasPerk(room,bot.id,'splitshot');
+        for(let i=0;i<bcnt;i++){
+          const spread=bcnt>1?w.spread||(bsh?0.15:0):0;
+          const a=bot.angle+(bcnt>1?(i-(bcnt-1)/2)*spread:(Math.random()-0.5)*w.spread);
           room.bullets.push({x:bot.x+Math.cos(a)*(PLAYER_R+8),y:bot.y+Math.sin(a)*(PLAYER_R+8),
-            vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,owner:bot.id,color:bot.color,
-            dmg:w.dmg,size:w.size,fire:false,electric:false,explosive:!!w.explosive,pierce:isPierce,ricochet:isRico,bounces:isRico?3:0});
+            vx:Math.cos(a)*bspd,vy:Math.sin(a)*bspd,owner:bot.id,color:bot.color,
+            dmg:bdmg,size:bsz,fire:false,electric:false,explosive:bexpl,pierce:isPierce,
+            ricochet:isRico,bounces:isRico?(2+bricoN*2):0,homing:bhomN,origSpd:bspd,splitN:bsplN,isSplit:false,poisonN:hasPerk(room,bot.id,'poison')});
         }
       }
     }
@@ -453,7 +503,7 @@ function tickRoom(room){
   if(room.mode!=='draft'){
     for(const p of Object.values(room.players)){
       if(p.dead&&now>=p.respawnAt){
-        p.dead=false;p.hp=100+hasPerk(room,p.id,'extralife')*50;p.maxHp=p.hp;
+        p.dead=false;p.hp=100+hasPerk(room,p.id,'extralife')*50+hasPerk(room,p.id,'shield2')*25;p.maxHp=p.hp;
         const dashN=hasPerk(room,p.id,'dash');
         p.spawnShield=Date.now()+3000+(dashN*2000);
         const sp=randomSpawnInMap(room.mapKey,p.x,p.y);p.x=sp.x;p.y=sp.y;
@@ -484,7 +534,8 @@ function tickRoom(room){
     if(p.dead)continue;
     for(let i=room.powerups.length-1;i>=0;i--){
       const pu=room.powerups[i];
-      if((p.x-pu.x)**2+(p.y-pu.y)**2<(PLAYER_R+16)**2){
+      const pickR=PLAYER_R+16+(hasPerk(room,p.id,'magnet')?80*hasPerk(room,p.id,'magnet'):0);
+      if((p.x-pu.x)**2+(p.y-pu.y)**2<pickR*pickR){
         if(pu.duration>0)p.effects[pu.type]=now+pu.duration;
         else if(pu.type==='freeze'){for(const o of Object.values(room.players)){if(o.id!==p.id)o.effects.frozen=now+2000;}}
         else if(pu.type==='nuke'){for(const o of Object.values(room.players)){if(o.id!==p.id&&!(o.spawnShield&&Date.now()<o.spawnShield)){o.hp-=40;if(o.hp<=0)killPlayerInRoom(room,o,p.id);}}io.to(room.id).emit('explosion',{x:p.x,y:p.y});}
@@ -536,6 +587,31 @@ function tickRoom(room){
     }
   }
 
+  // poison tick
+  for(const p of Object.values(room.players)){
+    if(p.dead||!p.poisonEnd||now>p.poisonEnd)continue;
+    p.hp-=5/60;if(p.hp<=0)killPlayerInRoom(room,p,p.poisonBy||null);
+  }
+
+  // turret auto-fire
+  for(const p of Object.values(room.players)){
+    const tn3=hasPerk(room,p.id,'miniturret');if(!tn3||p.dead)continue;
+    if(!p.turretLast)p.turretLast=0;
+    if(now-p.turretLast<500/tn3)continue;
+    let closest=null,cd2=300*300;
+    for(const o of Object.values(room.players)){
+      if(o.id===p.id||o.dead)continue;
+      const d2=(o.x-p.x)**2+(o.y-p.y)**2;if(d2<cd2){cd2=d2;closest=o;}
+    }
+    if(closest){
+      p.turretLast=now;
+      const a=Math.atan2(closest.y-p.y,closest.x-p.x);
+      room.bullets.push({x:p.x+Math.cos(a)*(PLAYER_R+8),y:p.y+Math.sin(a)*(PLAYER_R+8),
+        vx:Math.cos(a)*12,vy:Math.sin(a)*12,owner:p.id,color:'#ffff44',dmg:8*tn3,size:3,
+        fire:false,electric:false,explosive:false,pierce:false,ricochet:false,bounces:0,homing:0,origSpd:12,splitN:0,isSplit:false});
+    }
+  }
+
   // bullets
   room.bullets=room.bullets.filter(b=>{
     // homing: curve toward nearest enemy
@@ -584,9 +660,17 @@ function tickRoom(room){
       const hr=PLAYER_R*Math.pow(0.7,hasPerk(room,p.id,'tinyterror'));
       if((p.x-b.x)**2+(p.y-b.y)**2<(hr+b.size)**2){
         let dmg=b.dmg;if(b.fire)dmg*=1.3;
+        // rage: bonus dmg when attacker is low HP
+        const rageN=hasPerk(room,b.owner,'rage');
+        if(rageN){const atk=room.players[b.owner];if(atk&&atk.hp<atk.maxHp*0.5)dmg*=1+rageN*0.3;}
+        // armor: reduce incoming dmg
+        const armN=hasPerk(room,p.id,'shield2');if(armN)dmg*=Math.pow(0.85,armN);
         if(hasEffect(p,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=dmg;if(sh.hp<=0)killPlayerInRoom(room,sh,p.id);else if(!sh.isBot)io.to(sh.id).emit('hit');}return false;}
         if(b.explosive){io.to(room.id).emit('explosion',{x:b.x,y:b.y});for(const op of Object.values(room.players)){if(op.id===b.owner||hasEffect(op,'ghost')||(op.spawnShield&&Date.now()<op.spawnShield))continue;const d=Math.sqrt((op.x-b.x)**2+(op.y-b.y)**2);if(d<80){let sp=dmg*(1-d/80);if(hasEffect(op,'mirror')){const sh=room.players[b.owner];if(sh){sh.hp-=sp;if(sh.hp<=0)killPlayerInRoom(room,sh,op.id);}}else op.hp-=sp;}}}
         else p.hp-=dmg;
+        // poison
+        if(b.poisonN){p.poisonEnd=Date.now()+3000;p.poisonBy=b.owner;}
+        // vampire heal
         // vampire heal
         const vn=hasPerk(room,b.owner,'vampire');if(vn){const sh=room.players[b.owner];if(sh&&!sh.dead)sh.hp=Math.min(sh.maxHp,sh.hp+dmg*0.2*vn);}
         // thorns

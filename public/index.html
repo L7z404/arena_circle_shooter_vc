@@ -72,6 +72,7 @@ input[type=color]{width:40px;height:32px;border:none;background:none;cursor:poin
     <div class="row" id="botMapRow"></div>
     <button class="bot-btn" onclick="startBotGame()" style="background:#44aa44;margin-top:4px">⚔ Play vs Bots (random map)</button>
     <button class="bot-btn" onclick="startBotGame(null,'gungame')" style="background:#aa8844;margin-top:4px">🔫 Gun Game vs Bots (random map)</button>
+    <button class="bot-btn" onclick="startBotGame(null,'draft')" style="background:#8844aa;margin-top:4px">⚔ Arms Race vs Bots (random map)</button>
   </div>
 
   <div class="controls-hint">
@@ -358,6 +359,24 @@ function draw(){
 
     // dash afterimage ring
     if(perks.includes('dash')){ctx.beginPath();ctx.arc(p.x,p.y,pr+8,0,Math.PI*2);ctx.strokeStyle='#ffffff22';ctx.lineWidth=1;ctx.stroke();}
+
+    // clone shot double barrel indicator
+    if(perks.includes('clone')){ctx.beginPath();ctx.arc(p.x,p.y,pr+4,p.angle+1.5,p.angle+1.8);ctx.strokeStyle='#aaaaff88';ctx.lineWidth=3;ctx.stroke();ctx.beginPath();ctx.arc(p.x,p.y,pr+4,p.angle-1.8,p.angle-1.5);ctx.strokeStyle='#aaaaff88';ctx.lineWidth=3;ctx.stroke();}
+
+    // poison green tint
+    if(perks.includes('poison')){ctx.beginPath();ctx.arc(p.x,p.y,pr+3,0,Math.PI*2);ctx.strokeStyle='#44ff4444';ctx.lineWidth=2;ctx.stroke();}
+
+    // armor shield icon
+    if(perks.includes('shield2')){ctx.beginPath();ctx.arc(p.x,p.y,pr+6,Math.PI*0.8,Math.PI*1.2);ctx.strokeStyle='#8888ff88';ctx.lineWidth=4;ctx.stroke();}
+
+    // rage red glow when low HP
+    if(perks.includes('rage')&&p.hp<p.maxHp*0.5){ctx.beginPath();ctx.arc(p.x,p.y,pr+5,0,Math.PI*2);ctx.strokeStyle=`rgba(255,0,0,${0.3+Math.sin(tick*0.3)*0.2})`;ctx.lineWidth=3;ctx.stroke();}
+
+    // turret indicator
+    if(perks.includes('miniturret')){ctx.fillStyle='#ffff44';ctx.fillRect(p.x-2,p.y-pr-6,4,4);}
+
+    // magnet range
+    if(perks.includes('magnet')){ctx.beginPath();ctx.arc(p.x,p.y,PLAYER_R+96,0,Math.PI*2);ctx.strokeStyle='#ff44ff11';ctx.lineWidth=1;ctx.stroke();}
 
     // speedster trail
     if(perks.includes('speedster')){ctx.globalAlpha*=0.3;drawSkin(ctx,p.x-Math.cos(p.angle)*8,p.y-Math.sin(p.angle)*8,pr,p.color,p.skin||'solid',p.angle);ctx.globalAlpha=isGhost?(p.id===myId?0.4:0.15):1;}
