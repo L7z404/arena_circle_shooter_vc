@@ -42,6 +42,7 @@ const POWERUP_TYPES=[
   {type:'gravity',color:'#6633cc',icon:'🌀',duration:5000},{type:'freeze',color:'#66ffff',icon:'❄',duration:0},
   {type:'nuke',color:'#ffff00',icon:'☢',duration:0},{type:'teleport',color:'#ff66ff',icon:'✦',duration:0},
   {type:'regen',color:'#00ff66',icon:'💚',duration:8000},{type:'pierce',color:'#ff8800',icon:'🔱',duration:5000},
+  {type:'ricochet',color:'#ffcc00',icon:'🔄',duration:6000},
 ];
 const BOT_NAMES=['Bot Alpha','Bot Bravo','Bot Charlie'];
 const BOT_COLORS=['#ff8844','#44ffaa','#ff44ff'];
@@ -133,7 +134,7 @@ function spawnPowerupInRoom(room){
   const obs=MAPS[room.mapKey].obstacles;let x,y,v;
   for(let i=0;i<20;i++){x=80+Math.random()*(W-160);y=80+Math.random()*(H-160);v=true;
     for(const o of obs){if(x>o.x-20&&x<o.x+o.w+20&&y>o.y-20&&y<o.y+o.h+20){v=false;break;}}if(v)break;}
-  if(v)room.powerups.push({...t,x,y,id:Date.now()+Math.random()});
+  if(v)room.powerups.push({...t,x,y,id:Date.now()+Math.random(),spawnedAt:Date.now()});
 }
 
 function sendLobby(){
@@ -237,13 +238,13 @@ io.on('connection',socket=>{
     if(now-p.lastShot<w.cd)return;
     p.lastShot=now;
     socket.emit('shot');
-    const isPierce=hasEffect(p,'pierce');
+    const isPierce=hasEffect(p,'pierce'),isRico=hasEffect(p,'ricochet');
     for(let i=0;i<w.count;i++){
       const a=p.angle+(w.count>1?(i-(w.count-1)/2)*w.spread:(Math.random()-0.5)*w.spread);
       room.bullets.push({x:p.x+Math.cos(a)*(PLAYER_R+8),y:p.y+Math.sin(a)*(PLAYER_R+8),
         vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,
         owner:socket.id,color:p.color,dmg:w.dmg,size:w.size,
-        fire:false,electric:false,explosive:!!w.explosive,pierce:isPierce});
+        fire:false,electric:false,explosive:!!w.explosive,pierce:isPierce,ricochet:isRico,bounces:isRico?3:0});
     }
   });
 
@@ -283,12 +284,12 @@ function tickBotInRoom(room,bot){
     if(dist<400){
       const now=Date.now(),w=WEAPONS[bot.weapon];
       if(now-bot.lastShot>=w.cd&&!(bot.spawnShield&&now<bot.spawnShield)){
-        bot.lastShot=now;const isPierce=hasEffect(bot,'pierce');
+        bot.lastShot=now;const isPierce=hasEffect(bot,'pierce'),isRico=hasEffect(bot,'ricochet');
         for(let i=0;i<w.count;i++){
           const a=bot.angle+(w.count>1?(i-(w.count-1)/2)*w.spread:(Math.random()-0.5)*w.spread);
           room.bullets.push({x:bot.x+Math.cos(a)*(PLAYER_R+8),y:bot.y+Math.sin(a)*(PLAYER_R+8),
             vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,owner:bot.id,color:bot.color,
-            dmg:w.dmg,size:w.size,fire:false,electric:false,explosive:!!w.explosive,pierce:isPierce});
+            dmg:w.dmg,size:w.size,fire:false,electric:false,explosive:!!w.explosive,pierce:isPierce,ricochet:isRico,bounces:isRico?3:0});
         }
       }
     }
@@ -371,8 +372,23 @@ function tickRoom(room){
   // bullets
   room.bullets=room.bullets.filter(b=>{
     b.x+=b.vx;b.y+=b.vy;
-    if(b.x<0||b.x>W||b.y<0||b.y>H)return false;
-    if(!b.pierce){for(const o of obs){if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h){if(b.explosive)io.to(room.id).emit('explosion',{x:b.x,y:b.y});return false;}}}
+    // arena edge: bounce or destroy
+    if(b.x<0||b.x>W||b.y<0||b.y>H){
+      if(b.ricochet&&b.bounces>0){
+        if(b.x<0||b.x>W)b.vx*=-1;
+        if(b.y<0||b.y>H)b.vy*=-1;
+        b.x=Math.max(0,Math.min(W,b.x));b.y=Math.max(0,Math.min(H,b.y));b.bounces--;
+      } else return false;
+    }
+    // obstacle collision: bounce or destroy
+    if(!b.pierce){for(const o of obs){if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h){
+      if(b.ricochet&&b.bounces>0){
+        const oL=b.x-o.x,oR=o.x+o.w-b.x,oT=b.y-o.y,oB=o.y+o.h-b.y;
+        const m=Math.min(oL,oR,oT,oB);
+        if(m===oL||m===oR)b.vx*=-1; else b.vy*=-1;
+        b.x+=b.vx*2;b.y+=b.vy*2;b.bounces--;
+      } else {if(b.explosive)io.to(room.id).emit('explosion',{x:b.x,y:b.y});return false;}
+    }}}
     for(const p of Object.values(room.players)){
       if(p.id===b.owner||p.dead||hasEffect(p,'ghost')||(p.spawnShield&&Date.now()<p.spawnShield))continue;
       if((p.x-b.x)**2+(p.y-b.y)**2<(PLAYER_R+b.size)**2){
@@ -388,6 +404,9 @@ function tickRoom(room){
   });
 
   for(const p of Object.values(room.players)){if(p.hp<=0&&!p.dead)killPlayerInRoom(room,p,null);}
+
+  // despawn old powerups
+  room.powerups=room.powerups.filter(p=>Date.now()-p.spawnedAt<7000);
 
   // spawn powerups
   if(Math.random()<0.01)spawnPowerupInRoom(room);
