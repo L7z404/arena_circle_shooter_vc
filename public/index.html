@@ -77,8 +77,9 @@ input[type=color]{width:40px;height:32px;border:none;background:none;cursor:poin
 
   <div class="controls-hint">
     WASD move · Mouse aim · Click shoot · 1/2/3 switch loadout weapon · Scroll to cycle<br>
-    Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce
+    Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce 🔄Ricochet
   </div>
+  <button id="langBtn" onclick="setLang(lang==='en'?'es':'en')" style="margin-top:8px;padding:8px 16px;border-radius:6px;border:1px solid #555;background:#222;color:#fff;cursor:pointer;font-size:14px">🇪🇸 Español</button>
 </div>
 <button id="backBtn" onclick="socket.emit('backToLobby')">← Lobby</button>
 <canvas id="c"></canvas>
@@ -89,6 +90,66 @@ const overlay=document.getElementById('overlay'),msgEl=document.getElementById('
 const lobbyEl=document.getElementById('lobby'),backBtn=document.getElementById('backBtn');
 const previewCanvas=document.getElementById('preview'),pctx=previewCanvas.getContext('2d');
 const socket=io();
+
+// === i18n ===
+const LANG={
+en:{
+  connecting:'Connecting...',gameFull:'Game full (4/4).',
+  title:'⚔ ARENA SHOOTER ⚔',customize:'👤 Customize',name:'Name',color:'Color',
+  loadout:'🔫 Loadout',pick3:'(pick 3)',voteMap:'🗺 Vote for Map',
+  singleplayer:'🤖 Singleplayer',spDesc:'Play against bots — pick a map below or random',
+  botRandom:'⚔ Play vs Bots (random map)',gunGame:'🔫 Gun Game vs Bots (random map)',
+  armsRace:'⚔ Arms Race vs Bots (random map)',
+  controls:'WASD move · Mouse aim · Click shoot · 1/2/3 switch loadout weapon · Scroll to cycle',
+  powerups:'Powerups: 👻Ghost 🪞Mirror 🌀Gravity ❄Freeze ☢Nuke ✦Teleport 💚Regen 🔱Pierce 🔄Ricochet',
+  backLobby:'← Lobby',youDied:'YOU DIED',respawning:'Respawning in','respawning2':'Respawning...',
+  returnLobby:'Return to lobby to play again',round:'Round',
+  pickPerk:'Choose a perk:',clickPerk:'Click a perk to choose',
+  youWon:'🏆 You won the round! No perk for you.',waitOthers:'Waiting for others to pick...',
+  waitOthers2:'Waiting for others...',youChose:'✅ You chose:',chose:'chose',
+  wins:'WINS!',perks:'Perks',playersIn:'players in lobby',votesIn:'votes in',
+  langBtn:'🇪🇸 Español'
+},
+es:{
+  connecting:'Conectando...',gameFull:'Juego lleno (4/4).',
+  title:'⚔ ARENA SHOOTER ⚔',customize:'👤 Personalizar',name:'Nombre',color:'Color',
+  loadout:'🔫 Equipamiento',pick3:'(elige 3)',voteMap:'🗺 Votar Mapa',
+  singleplayer:'🤖 Un Jugador',spDesc:'Juega contra bots — elige un mapa o aleatorio',
+  botRandom:'⚔ Jugar vs Bots (mapa aleatorio)',gunGame:'🔫 Gun Game vs Bots (mapa aleatorio)',
+  armsRace:'⚔ Arms Race vs Bots (mapa aleatorio)',
+  controls:'WASD mover · Ratón apuntar · Click disparar · 1/2/3 cambiar arma · Scroll para ciclar',
+  powerups:'Poderes: 👻Fantasma 🪞Espejo 🌀Gravedad ❄Congelar ☢Nuke ✦Teletransporte 💚Regen 🔱Perforar 🔄Rebote',
+  backLobby:'← Lobby',youDied:'MORISTE',respawning:'Reapareciendo en','respawning2':'Reapareciendo...',
+  returnLobby:'Vuelve al lobby para jugar de nuevo',round:'Ronda',
+  pickPerk:'Elige una habilidad:',clickPerk:'Haz click para elegir',
+  youWon:'🏆 ¡Ganaste la ronda! No eliges habilidad.',waitOthers:'Esperando a los demás...',
+  waitOthers2:'Esperando a los demás...',youChose:'✅ Elegiste:',chose:'eligió',
+  wins:'¡GANA!',perks:'Habilidades',playersIn:'jugadores en lobby',votesIn:'votos de',
+  langBtn:'🇺🇸 English'
+}
+};
+let lang=localStorage.getItem('arenaLang')||'en';
+function t(k){return LANG[lang][k]||LANG.en[k]||k;}
+function setLang(l){lang=l;localStorage.setItem('arenaLang',l);applyLang();}
+function applyLang(){
+  document.querySelector('#lobby h1').textContent=t('title');
+  document.querySelectorAll('#lobby .section h2')[0].textContent=t('customize');
+  document.querySelectorAll('#lobby .section h2')[1].innerHTML=t('loadout')+' <span style="color:#666;font-size:13px">'+t('pick3')+'</span>';
+  document.querySelectorAll('#lobby .section h2')[2].textContent=t('voteMap');
+  document.querySelectorAll('#lobby .section h2')[3].textContent=t('singleplayer');
+  document.querySelector('#lobby .section:nth-child(5) p').textContent=t('spDesc');
+  const btns=document.querySelectorAll('.bot-btn');
+  if(btns[0])btns[0].textContent=t('botRandom');
+  if(btns[1])btns[1].textContent=t('gunGame');
+  if(btns[2])btns[2].textContent=t('armsRace');
+  document.querySelector('.controls-hint').innerHTML=t('controls')+'<br>'+t('powerups');
+  document.getElementById('backBtn').textContent=t('backLobby');
+  document.querySelector('label[for="nameInput"],#lobby label:first-of-type')||0;
+  const labels=document.querySelectorAll('#lobby .row label');
+  if(labels[0])labels[0].textContent=t('name');
+  if(labels[1])labels[1].textContent=t('color');
+  document.getElementById('langBtn').textContent=t('langBtn');
+}
 
 let myId=null,W=1200,H=800,state=null,phase='connecting';
 let keys={},mouse={x:0,y:0};
@@ -180,20 +241,21 @@ socket.on('init',d=>{
   canvas.width=W;canvas.height=H;overlay.classList.add('hidden');
   document.getElementById('nameInput').value=myName;
   document.getElementById('colorInput').value=myColor;
-  buildSkinRow();buildLoadoutRow();drawPreview();
+  buildSkinRow();buildLoadoutRow();drawPreview();applyLang();
   sendCustomize();
 });
-socket.on('full',()=>{msgEl.textContent='Game full (4/4).';});
+socket.on('full',()=>{msgEl.textContent=t('gameFull');});
 socket.on('lobby',d=>{
   phase='lobby';canvas.style.display='none';backBtn.classList.remove('show');
   lobbyEl.classList.add('active');
   document.getElementById('playerDots').innerHTML=d.players.map(p=>`<div class="player-dot" style="background:${p.color}" title="${p.name}"></div>`).join('');
-  document.getElementById('playerCount').textContent=`${d.players.length}/4 players`;
+  document.getElementById('playerCount').textContent=`${d.players.length}/4 ${t('playersIn')}`;
   document.getElementById('mapGrid').innerHTML=d.maps.map(m=>`<div class="map-card${myVote===m.key?' voted':''}" onclick="voteMap('${m.key}')"><h3>${m.label}</h3><p>${m.desc}</p><div class="votes">${m.votes?'★'.repeat(m.votes)+' '+m.votes+' vote'+(m.votes>1?'s':''):''}</div></div>`).join('');
   const vs=document.getElementById('voteStatus');
-  if(d.totalVotes<d.totalPlayers)vs.textContent=`Votes: ${d.totalVotes}/${d.totalPlayers} — waiting for everyone...`;
-  else vs.textContent='All voted! Starting...';
+  if(d.totalVotes<d.totalPlayers)vs.textContent=`${t('votesIn')}: ${d.totalVotes}/${d.totalPlayers}`;
+  else vs.textContent=lang==='es'?'¡Todos votaron! Iniciando...':'All voted! Starting...';
   document.getElementById('botMapRow').innerHTML=d.maps.map(m=>`<button class="bot-btn" onclick="startBotGame('${m.key}')">${m.label}</button>`).join('');
+  applyLang();
 });
 socket.on('gameStart',d=>{
   phase='playing';lobbyEl.classList.remove('active');
@@ -219,7 +281,7 @@ socket.on('deathFx',d=>{
   }
 });
 socket.on('killFeed',d=>{killFeed.push({...d,t:Date.now()});if(killFeed.length>5)killFeed.shift();});
-socket.on('gameOver',d=>{gameOverMsg=d.winner+' WINS!';draftOverlay=null;});
+socket.on('gameOver',d=>{gameOverMsg=d.winner+' '+t('wins');draftOverlay=null;});
 socket.on('draftRound',d=>{draftOverlay=null;});
 socket.on('draftPick',d=>{
   draftOverlay=d;draftOverlay.pickedPerks=[];
@@ -507,15 +569,15 @@ function draw(){
     const left=Math.max(0,(respawnTimer-Date.now())/1000);
     ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#ff4444';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('YOU DIED',W/2,H/2-30);
+    ctx.fillText(t('youDied'),W/2,H/2-30);
     ctx.fillStyle='#fff';ctx.font='24px sans-serif';
-    ctx.fillText(left>0?`Respawning in ${left.toFixed(1)}s...`:'Respawning...',W/2,H/2+20);
+    ctx.fillText(left>0?`${t('respawning')} ${left.toFixed(1)}s...`:t('respawning2'),W/2,H/2+20);
   }
 
   // draft round HUD
   if(state.mode==='draft'&&state.round){
     ctx.textAlign='left';ctx.font='bold 16px sans-serif';ctx.fillStyle='#ffcc00';
-    ctx.fillText(`Round ${state.round}/${state.maxRounds}`,16,H-16);
+    ctx.fillText(`${t('round')} ${state.round}/${state.maxRounds}`,16,H-16);
     // show my perks as emojis at bottom center
     const myPerks=state.playerPerks?.[myId]||[];
     if(myPerks.length){
@@ -530,23 +592,22 @@ function draw(){
     ctx.textAlign='center';ctx.textBaseline='middle';
 
     ctx.fillStyle='#ffcc00';ctx.font='bold 32px sans-serif';
-    ctx.fillText(`Round ${draftOverlay.round}/${draftOverlay.maxRounds}`,W/2,120);
+    ctx.fillText(`${t('round')} ${draftOverlay.round}/${draftOverlay.maxRounds}`,W/2,120);
 
     if(draftOverlay.picked){
-      // already picked — show confirmation
       const chosenPerk=draftOverlay.offered.find(p=>p.id===draftOverlay.chosenId);
       ctx.fillStyle='#88ff88';ctx.font='bold 28px sans-serif';
-      ctx.fillText(`✅ You chose: ${chosenPerk?chosenPerk.icon+' '+chosenPerk.label:'???'}`,W/2,H/2-20);
+      ctx.fillText(`${t('youChose')} ${chosenPerk?chosenPerk.icon+' '+chosenPerk.label:'???'}`,W/2,H/2-20);
       ctx.fillStyle='#aaa';ctx.font='16px sans-serif';
-      ctx.fillText('Waiting for others...',W/2,H/2+20);
+      ctx.fillText(t('waitOthers2'),W/2,H/2+20);
     } else if(draftOverlay.skipped){
       ctx.fillStyle='#88ff88';ctx.font='bold 28px sans-serif';
-      ctx.fillText('🏆 You won the round! No perk for you.',W/2,H/2-20);
+      ctx.fillText(t('youWon'),W/2,H/2-20);
       ctx.fillStyle='#aaa';ctx.font='16px sans-serif';
-      ctx.fillText('Waiting for others to pick...',W/2,H/2+20);
+      ctx.fillText(t('waitOthers'),W/2,H/2+20);
     } else {
       ctx.fillStyle='#fff';ctx.font='22px sans-serif';
-      ctx.fillText('Choose a perk:',W/2,165);
+      ctx.fillText(t('pickPerk'),W/2,165);
       const offered=draftOverlay.offered||[];
       const bw=220,bh=130,gap=30,totalW=offered.length*bw+(offered.length-1)*gap;
       const startX=(W-totalW)/2,by=H/2-bh/2;
@@ -554,7 +615,6 @@ function draw(){
       for(let i=0;i<offered.length;i++){
         const pk=offered[i],bx=startX+i*(bw+gap);
         draftOverlay._buttons.push({id:pk.id,x:bx,y:by,w:bw,h:bh});
-        // hover effect
         const hover=mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh;
         ctx.fillStyle=hover?'#444':'#2a2a2a';ctx.fillRect(bx,by,bw,bh);
         ctx.strokeStyle=hover?'#fff':'#ffcc00';ctx.lineWidth=hover?3:2;ctx.strokeRect(bx,by,bw,bh);
@@ -567,12 +627,11 @@ function draw(){
       }
     }
 
-    // show who already picked
     const picks=draftOverlay.pickedPerks||[];
     if(picks.length){
       ctx.textAlign='left';ctx.font='14px sans-serif';ctx.fillStyle='#88ff88';
       for(let i=0;i<picks.length;i++){
-        ctx.fillText(`✓ ${picks[i].name} chose ${picks[i].perk}`,20,H-60-i*20);
+        ctx.fillText(`✓ ${picks[i].name} ${t('chose')} ${picks[i].perk}`,20,H-60-i*20);
       }
     }
   }
@@ -583,7 +642,7 @@ function draw(){
     ctx.fillStyle='#ffdd00';ctx.font='bold 48px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(gameOverMsg,W/2,H/2-20);
     ctx.fillStyle='#fff';ctx.font='20px sans-serif';
-    ctx.fillText('Return to lobby to play again',W/2,H/2+30);
+    ctx.fillText(t('returnLobby'),W/2,H/2+30);
   }
 }
 draw();

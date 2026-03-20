@@ -616,14 +616,14 @@ function tickRoom(room){
   room.bullets=room.bullets.filter(b=>{
     // homing: curve toward nearest enemy
     if(b.homing){
-      let closest=null,cd2=250*250;
+      let closest=null,cd2=400*400;
       for(const p of Object.values(room.players)){
         if(p.id===b.owner||p.dead)continue;
         const d2=(p.x-b.x)**2+(p.y-b.y)**2;if(d2<cd2){cd2=d2;closest=p;}
       }
       if(closest){
         const dx=closest.x-b.x,dy=closest.y-b.y,d=Math.sqrt(dx*dx+dy*dy);
-        const str=0.15*b.homing;
+        const str=0.4*b.homing;
         b.vx+=dx/d*str;b.vy+=dy/d*str;
         const spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy),maxSpd=b.origSpd||10;
         if(spd>maxSpd){b.vx=b.vx/spd*maxSpd;b.vy=b.vy/spd*maxSpd;}
