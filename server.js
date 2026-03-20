@@ -100,15 +100,16 @@ function createRoom(mapKey,creatorIds,mode){
   if(mode==='gungame')room.gunProgress={};
   if(mode==='draft'){room.round=1;room.maxRounds=20;room.draftPhase=false;room.playerPerks={};room.draftChoices={};room.roundScores={};room.roundTimer=null;}
   rooms[id]=room;
+  const shuffled=[...map.spawns].sort(()=>Math.random()-0.5);
   let idx=0;
   for(const sid of creatorIds){
     const prof=lobbyPlayers[sid]||{};
-    const sp=map.spawns[idx%map.spawns.length];
+    const sp=shuffled[idx%shuffled.length];
     const wep=mode==='gungame'?WEAPON_KEYS[0]:(prof.loadout||DEFAULT_LOADOUT)[0];
     room.players[sid]={id:sid,idx,x:sp.x,y:sp.y,angle:0,hp:100,maxHp:100,
-      color:prof.color||'#ff4444',name:prof.name||'Player',skin:prof.skin||'solid',
+      color:prof.color||'#ff4444',name:prof.name||'Player',skin:prof.skin||'solid',hat:prof.hat||'none',cape:prof.cape||'none',
       loadout:prof.loadout||[...DEFAULT_LOADOUT],
-      lastShot:0,keys:{},weapon:wep,effects:{},spawnShield:Date.now()+3000};
+      lastShot:0,keys:{},weapon:wep,effects:{},spawnShield:Date.now()+3000,roundFrozen:Date.now()+3000};
     room.scores[sid]=0;
     if(mode==='gungame')room.gunProgress[sid]=0;
     if(mode==='draft'){room.playerPerks[sid]=[];room.roundScores[sid]=0;}
@@ -121,7 +122,8 @@ function createRoom(mapKey,creatorIds,mode){
 function addBotToRoom(room,idx){
   const bid='bot_'+room.id+'_'+idx;
   const map=MAPS[room.mapKey];
-  const sp=map.spawns[idx%map.spawns.length];
+  const shuffled=[...map.spawns].sort(()=>Math.random()-0.5);
+  const sp=shuffled[idx%shuffled.length];
   const loadout=[...WEAPON_KEYS].sort(()=>Math.random()-0.5).slice(0,3);
   const wep=room.mode==='gungame'?WEAPON_KEYS[0]:loadout[0];
   room.players[bid]={id:bid,idx,x:sp.x,y:sp.y,angle:0,hp:100,maxHp:100,
@@ -182,12 +184,14 @@ function hasPerk(room,pid,perkId){return room.playerPerks&&room.playerPerks[pid]
 
 function startDraftRound(room){
   room.draftPhase=false;room.draftChoices={};room.bullets=[];room.powerups=[];
-  // reset hp and respawn all players
-  const map=MAPS[room.mapKey];let idx=0;
+  // reset hp and respawn all players at random positions
+  const map=MAPS[room.mapKey];
+  const shuffled=[...map.spawns].sort(()=>Math.random()-0.5);
+  let idx=0;
   for(const p of Object.values(room.players)){
-    const sp=map.spawns[idx%map.spawns.length];
+    const sp=shuffled[idx%shuffled.length];
     p.x=sp.x;p.y=sp.y;p.hp=100+hasPerk(room,p.id,'extralife')*50+hasPerk(room,p.id,'shield2')*25;
-    p.maxHp=p.hp;p.dead=false;p.effects={};p.spawnShield=Date.now()+3000;
+    p.maxHp=p.hp;p.dead=false;p.effects={};p.spawnShield=Date.now()+3000;p.roundFrozen=Date.now()+3000;
     idx++;
   }
   // track kills this round
@@ -413,7 +417,7 @@ io.on('connection',socket=>{
 });
 // === GAME LOOP (per room) ===
 function tickBotInRoom(room,bot){
-  if(hasEffect(bot,'frozen'))return;
+  if(hasEffect(bot,'frozen')||(bot.roundFrozen&&Date.now()<bot.roundFrozen))return;
   let target=null,minD=Infinity;
   for(const p of Object.values(room.players)){
     if(p.id===bot.id||p.dead||hasEffect(p,'ghost'))continue;
@@ -520,7 +524,7 @@ function tickRoom(room){
 
   for(const p of Object.values(room.players)){
     if(p.dead)continue;
-    if(hasEffect(p,'frozen')){clamp(p);continue;}
+    if(hasEffect(p,'frozen')||(p.roundFrozen&&now<p.roundFrozen)){clamp(p);continue;}
     if(p.isBot)continue; // bots handled above
     let spd=hasEffect(p,'x2speed')?SPEED*2:SPEED;
     const sn=hasPerk(room,p.id,'speedster');if(sn)spd*=1+sn*0.35;
