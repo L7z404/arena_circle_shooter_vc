@@ -262,6 +262,9 @@ function checkAllVoted(){
       const s=io.sockets.sockets.get(id);if(s)s.join(room.id);
       delete lobbyVotes[id];
     }
+    // fill remaining slots with bots
+    const humanCount=Object.keys(room.players).length;
+    for(let i=humanCount;i<4;i++)addBotToRoom(room,i);
     spawnPowerupInRoom(room);
     io.to(room.id).emit('gameStart',{map:best,mode:'draft',mapData:{obstacles:MAPS[best].obstacles,color:MAPS[best].color}});
     startDraftRound(room);
